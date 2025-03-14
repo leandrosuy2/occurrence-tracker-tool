@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,12 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Cores personalizadas para o sistema
+				'ocorrencia-azul-escuro': '#1D3557',
+				'ocorrencia-azul-medio': '#457B9D',
+				'ocorrencia-vermelho': '#E63946',
+				'ocorrencia-cinza-claro': '#F1FAEE',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
