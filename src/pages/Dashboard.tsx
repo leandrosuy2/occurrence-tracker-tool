@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import StatCard from '@/components/StatCard';
 import Map from '@/components/Map';
@@ -7,8 +7,10 @@ import { FileText, AlertTriangle, ShieldAlert, MapPin } from 'lucide-react';
 import occurrenceService from '@/services/occurrenceService';
 import policeStationService from '@/services/policeStationService';
 import authService from '@/services/authService';
+import notificationService from '@/services/notificationService';
 import { OccurrenceStats, Occurrence, PoliceStation } from '@/types';
 import { toast } from 'sonner';
+import { useInterval } from '@/hooks/use-interval';
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<OccurrenceStats | null>(null);
@@ -18,35 +20,51 @@ const Dashboard: React.FC = () => {
   
   const isAdmin = authService.isAdmin();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const statsData = await occurrenceService.getOccurrenceStats();
-        setStats(statsData);
-        
-        // Apenas admin vê todas as ocorrências no mapa
-        if (isAdmin) {
-          // Esse endpoint não está na lista fornecida, mas presumo que existe para o admin
-          // Se não existir, precisamos adaptar essa lógica
-          const occurrencesData = await occurrenceService.getUserOccurrences();
-          setOccurrences(occurrencesData);
-        } else {
-          const userOccurrences = await occurrenceService.getUserOccurrences();
-          setOccurrences(userOccurrences);
+  const fetchOccurrences = useCallback(async () => {
+    try {
+      const occurrencesData = await occurrenceService.getUserOccurrences();
+      setOccurrences(prev => {
+        if (prev.length > 0) {
+          // Check for new occurrences
+          notificationService.checkForNewOccurrences(occurrencesData);
         }
-        
-        const stationsData = await policeStationService.getAllPoliceStations();
-        setPoliceStations(stationsData);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        toast.error('Erro ao carregar dados do dashboard');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, [isAdmin]);
+        return occurrencesData;
+      });
+    } catch (error) {
+      console.error('Error fetching occurrences:', error);
+    }
+  }, []);
+
+  // Function to fetch dashboard data
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      const statsData = await occurrenceService.getOccurrenceStats();
+      setStats(statsData);
+      
+      // Fetch occurrences based on user role
+      await fetchOccurrences();
+      
+      const stationsData = await policeStationService.getAllPoliceStations();
+      setPoliceStations(stationsData);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Erro ao carregar dados do dashboard');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchOccurrences]);
+
+  // Initial data load
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Poll for new occurrences every 30 seconds
+  useInterval(() => {
+    fetchOccurrences();
+  }, 30000); // 30 seconds
 
   return (
     <div className="space-y-6">
