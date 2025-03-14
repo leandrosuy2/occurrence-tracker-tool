@@ -1,6 +1,5 @@
-
 import api from './api';
-import jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import { User, LoginRequest, RegisterRequest } from '../types';
 import { toast } from "sonner";
 
