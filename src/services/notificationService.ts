@@ -19,7 +19,7 @@ class NotificationService {
     // Play sound
     this.playNotificationSound();
     
-    // Show toast notification
+    // Show toast notification with properly formatted JSX
     toast.info(
       <div className="flex flex-col gap-1">
         <div className="font-medium">Nova Ocorrência: {occurrence.title}</div>
