@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -41,6 +40,8 @@ const Map: React.FC<MapProps> = ({
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  const policeStationsRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   
   // Create marker elements for different occurrence types
   const createMarkerElement = (type: string) => {
@@ -127,75 +128,32 @@ const Map: React.FC<MapProps> = ({
     return el;
   };
   
-  const getUserCurrentLocation = () => {
-    if (navigator.geolocation) {
-      setLoadingLocation(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          
-          // If map is loaded, add or update user location marker
-          if (map.current) {
-            if (userLocationMarkerRef.current) {
-              userLocationMarkerRef.current.setLngLat([longitude, latitude]);
-            } else {
-              const el = createUserLocationMarker();
-              userLocationMarkerRef.current = new mapboxgl.Marker(el)
-                .setLngLat([longitude, latitude])
-                .addTo(map.current);
-              
-              // Center map on user location if no specific center was provided
-              if (!center || center[0] === -47.9292) { // If it's the default center
-                map.current.flyTo({
-                  center: [longitude, latitude],
-                  zoom: 14,
-                  speed: 1.5
-                });
-              }
-            }
-          }
-          
-          // If in selection mode, update selected location
-          if (selectionMode && onLocationSelect) {
-            setSelectedLocation([longitude, latitude]);
-            onLocationSelect(latitude, longitude);
-          }
-          
-          setLoadingLocation(false);
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          setLoadingLocation(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    }
-  };
-  
   useEffect(() => {
     if (!mapContainer.current) return;
     
     // Initialize map with the token provided
     mapboxgl.accessToken = MAPBOX_TOKEN;
     
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v11',
-      center: center,
-      zoom: zoom,
-      attributionControl: false,
-      responsive: true
-    });
-    
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    
-    // Add attribution control at the bottom left on larger screens, bottom on mobile
-    const mediaQuery = window.matchMedia('(min-width: 768px)');
-    const attributionPosition = mediaQuery.matches ? 'bottom-left' : 'bottom';
-    map.current.addControl(new mapboxgl.AttributionControl(), attributionPosition);
-    
-    // Add scale control
-    map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
+    // Only create the map if it doesn't exist
+    if (!map.current) {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: center,
+        zoom: zoom,
+        attributionControl: false
+      });
+      
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      
+      // Add attribution control at the bottom left on larger screens, bottom on mobile
+      const mediaQuery = window.matchMedia('(min-width: 768px)');
+      const attributionPosition = mediaQuery.matches ? 'bottom-left' : 'bottom';
+      map.current.addControl(new mapboxgl.AttributionControl(), attributionPosition);
+      
+      // Add scale control
+      map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
+    }
     
     // Resize map when the container changes size
     const resizeHandler = () => {
@@ -206,102 +164,186 @@ const Map: React.FC<MapProps> = ({
     
     window.addEventListener('resize', resizeHandler);
     
-    if (selectionMode) {
-      // In selection mode, allow click on map to select location
-      map.current.on('click', (e) => {
-        const { lng, lat } = e.lngLat;
-        setSelectedLocation([lng, lat]);
-        
-        if (markerRef.current) {
-          markerRef.current.remove();
-        }
-        
-        const el = document.createElement('div');
-        el.className = 'selection-marker';
-        el.style.width = '20px';
-        el.style.height = '20px';
-        el.style.borderRadius = '50%';
-        el.style.backgroundColor = '#1E88E5';
-        el.style.border = '2px solid white';
-        
-        markerRef.current = new mapboxgl.Marker(el)
-          .setLngLat([lng, lat])
-          .addTo(map.current!);
-        
-        if (onLocationSelect) {
-          onLocationSelect(lat, lng);
-        }
-      });
-    }
-    
-    map.current.on('load', () => {
-      if (!map.current) return;
-      
-      // Add occurrences to map
-      occurrences.forEach(occurrence => {
-        const el = createMarkerElement(occurrence.type);
-        
-        new mapboxgl.Marker(el)
-          .setLngLat([occurrence.longitude, occurrence.latitude])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
-              .setHTML(
-                `<div class="p-2">
-                  <h3 class="text-base font-semibold mb-1">${occurrence.title}</h3>
-                  <p class="text-sm mb-1">${occurrence.date} - ${occurrence.time}</p>
-                  <p class="text-sm">${occurrence.description}</p>
-                </div>`
-              )
-          )
-          .addTo(map.current!);
-      });
-      
-      // Add police stations to map
-      policeStations.forEach(station => {
-        const el = createPoliceStationMarker();
-        
-        new mapboxgl.Marker(el)
-          .setLngLat([station.longitude, station.latitude])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
-              .setHTML(
-                `<div class="p-2">
-                  <h3 class="text-base font-semibold mb-1">${station.name}</h3>
-                  <p class="text-sm mb-1">Email: ${station.email}</p>
-                  <p class="text-sm">Telefone: ${station.phone}</p>
-                </div>`
-              )
-          )
-          .addTo(map.current!);
-      });
-      
-      // Add the selection marker if we already have a location and are in selection mode
-      if (selectionMode && selectedLocation) {
-        const el = document.createElement('div');
-        el.className = 'selection-marker';
-        el.style.width = '20px';
-        el.style.height = '20px';
-        el.style.borderRadius = '50%';
-        el.style.backgroundColor = '#1E88E5';
-        el.style.border = '2px solid white';
-        
-        markerRef.current = new mapboxgl.Marker(el)
-          .setLngLat(selectedLocation)
-          .addTo(map.current);
-      }
-      
-      // Get user location if needed
-      if (getUserLocation) {
-        getUserCurrentLocation();
-      }
-    });
-    
     return () => {
       window.removeEventListener('resize', resizeHandler);
-      map.current?.remove();
     };
-  }, [center, zoom, occurrences, policeStations, selectionMode, onLocationSelect, getUserLocation]);
-  
+  }, []); // Empty dependency array - only run once
+
+  // Add effect to update map center and zoom when props change
+  useEffect(() => {
+    if (map.current && center) {
+      map.current.flyTo({
+        center: center,
+        zoom: zoom,
+        speed: 1.5
+      });
+    }
+  }, [center, zoom]);
+
+  // Separate effect for markers
+  useEffect(() => {
+    if (!map.current) return;
+
+    // Clear all existing markers
+    Object.values(markersRef.current).forEach(marker => marker.remove());
+    Object.values(policeStationsRef.current).forEach(marker => marker.remove());
+    markersRef.current = {};
+    policeStationsRef.current = {};
+
+    // Add occurrences to map
+    occurrences.forEach(occurrence => {
+      const key = `occurrence-${occurrence.id || occurrence.latitude}-${occurrence.longitude}`;
+      const el = createMarkerElement(occurrence.type);
+      
+      markersRef.current[key] = new mapboxgl.Marker(el)
+        .setLngLat([occurrence.longitude, occurrence.latitude])
+        .setPopup(
+          new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
+            .setHTML(
+              `<div class="p-2">
+                <h3 class="text-base font-semibold mb-1">${occurrence.title}</h3>
+                <p class="text-sm mb-1">${occurrence.date} - ${occurrence.time}</p>
+                <p class="text-sm">${occurrence.description}</p>
+              </div>`
+            )
+        )
+        .addTo(map.current!);
+    });
+
+    // Add police stations to map
+    policeStations.forEach(station => {
+      const key = `station-${station.id || station.latitude}-${station.longitude}`;
+      const el = createPoliceStationMarker();
+      
+      policeStationsRef.current[key] = new mapboxgl.Marker(el)
+        .setLngLat([station.longitude, station.latitude])
+        .setPopup(
+          new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
+            .setHTML(
+              `<div class="p-2">
+                <h3 class="text-base font-semibold mb-1">${station.name}</h3>
+                <p class="text-sm mb-1">Email: ${station.email}</p>
+                <p class="text-sm">Telefone: ${station.phone}</p>
+              </div>`
+            )
+        )
+        .addTo(map.current!);
+    });
+
+    return () => {
+      // Cleanup markers on unmount
+      Object.values(markersRef.current).forEach(marker => marker.remove());
+      Object.values(policeStationsRef.current).forEach(marker => marker.remove());
+      markersRef.current = {};
+      policeStationsRef.current = {};
+    };
+  }, [occurrences, policeStations]);
+
+  const getUserCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      console.error("Geolocation is not supported by your browser");
+      alert("Seu navegador não suporta geolocalização. Por favor, use um navegador mais moderno.");
+      return;
+    }
+
+    setLoadingLocation(true);
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        console.log("Location obtained:", { latitude, longitude }); // Debug log
+        
+        // If map is loaded, add or update user location marker
+        if (map.current) {
+          if (userLocationMarkerRef.current) {
+            userLocationMarkerRef.current.setLngLat([longitude, latitude]);
+          } else {
+            const el = createUserLocationMarker();
+            userLocationMarkerRef.current = new mapboxgl.Marker(el)
+              .setLngLat([longitude, latitude])
+              .addTo(map.current);
+          }
+          
+          // Always center map on user location when it's obtained
+          map.current.flyTo({
+            center: [longitude, latitude],
+            zoom: 14,
+            speed: 1.5
+          });
+        }
+        
+        // If in selection mode, update selected location
+        if (selectionMode && onLocationSelect) {
+          setSelectedLocation([longitude, latitude]);
+          onLocationSelect(latitude, longitude);
+        }
+        
+        setLoadingLocation(false);
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        setLoadingLocation(false);
+        
+        // More specific error messages based on the error code
+        let errorMessage = "Não foi possível obter sua localização.";
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Por favor, permita o acesso à sua localização nas configurações do navegador.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Não foi possível determinar sua localização. Verifique se o GPS está ativado.";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "A solicitação de localização expirou. Tente novamente.";
+            break;
+          default:
+            errorMessage = "Ocorreu um erro ao obter sua localização. Tente novamente.";
+        }
+        alert(errorMessage);
+      },
+      { 
+        enableHighAccuracy: true, 
+        timeout: 10000, 
+        maximumAge: 0 
+      }
+    );
+  };
+
+  // Separate effect for selection mode
+  useEffect(() => {
+    if (!map.current || !selectionMode) return;
+
+    const handleClick = (e: mapboxgl.MapMouseEvent) => {
+      const { lng, lat } = e.lngLat;
+      setSelectedLocation([lng, lat]);
+      
+      if (markerRef.current) {
+        markerRef.current.remove();
+      }
+      
+      const el = document.createElement('div');
+      el.className = 'selection-marker';
+      el.style.width = '20px';
+      el.style.height = '20px';
+      el.style.borderRadius = '50%';
+      el.style.backgroundColor = '#1E88E5';
+      el.style.border = '2px solid white';
+      
+      markerRef.current = new mapboxgl.Marker(el)
+        .setLngLat([lng, lat])
+        .addTo(map.current!);
+      
+      if (onLocationSelect) {
+        onLocationSelect(lat, lng);
+      }
+    };
+
+    map.current.on('click', handleClick);
+    return () => {
+      map.current?.off('click', handleClick);
+    };
+  }, [selectionMode, onLocationSelect]);
+
   return (
     <div className={`relative w-full ${height} rounded-lg overflow-hidden shadow-lg`}>
       <div ref={mapContainer} className="absolute inset-0" />

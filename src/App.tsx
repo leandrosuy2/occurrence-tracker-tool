@@ -48,6 +48,7 @@ const App = () => (
                 <Users />
               </ProtectedRoute>
             } />
+            
             <Route path="delegacias" element={
               <ProtectedRoute requireAdmin={true}>
                 <PoliceStations />
@@ -57,7 +58,8 @@ const App = () => (
               <ProtectedRoute requireAdmin={true}>
                 <Permissions />
               </ProtectedRoute>
-            } />
+            } /> 
+           
           </Route>
           
           {/* Catch-all route */}
