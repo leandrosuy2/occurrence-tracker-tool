@@ -1,11 +1,11 @@
 
-import api from './api';
+import api, { basePathUrlApiV1 } from './api';
 import { PoliceStation } from '../types';
 import { toast } from "sonner";
 
 const getAllPoliceStations = async (): Promise<PoliceStation[]> => {
   try {
-    const response = await api.get('/api/v1/policeStation');
+    const response = await api.get(`${basePathUrlApiV1}/policeStation`);
     return response.data;
   } catch (error) {
     console.error('Get all police stations error:', error);
@@ -16,7 +16,7 @@ const getAllPoliceStations = async (): Promise<PoliceStation[]> => {
 
 const getPoliceStationById = async (id: string): Promise<PoliceStation> => {
   try {
-    const response = await api.get(`/api/v1/policeStation/${id}`);
+    const response = await api.get(`${basePathUrlApiV1}/policeStation/${id}`);
     return response.data;
   } catch (error) {
     console.error('Get police station by id error:', error);
@@ -25,9 +25,9 @@ const getPoliceStationById = async (id: string): Promise<PoliceStation> => {
   }
 };
 
-const createPoliceStation = async (policeStation: Omit<PoliceStation, 'id'>): Promise<PoliceStation> => {
+const createPoliceStation = async (station: Omit<PoliceStation, 'id'>): Promise<PoliceStation> => {
   try {
-    const response = await api.post('/api/v1/policeStation/save', policeStation);
+    const response = await api.post(`${basePathUrlApiV1}/policeStation/save`, station);
     toast.success("Delegacia criada com sucesso!");
     return response.data;
   } catch (error) {
@@ -37,9 +37,9 @@ const createPoliceStation = async (policeStation: Omit<PoliceStation, 'id'>): Pr
   }
 };
 
-const updatePoliceStation = async (id: string, policeStation: Partial<PoliceStation>): Promise<PoliceStation> => {
+const updatePoliceStation = async (id: string, station: Partial<PoliceStation>): Promise<PoliceStation> => {
   try {
-    const response = await api.put(`/api/v1/policeStation/${id}`, policeStation);
+    const response = await api.put(`${basePathUrlApiV1}/policeStation/${id}`, station);
     toast.success("Delegacia atualizada com sucesso!");
     return response.data;
   } catch (error) {
@@ -51,7 +51,7 @@ const updatePoliceStation = async (id: string, policeStation: Partial<PoliceStat
 
 const deletePoliceStation = async (id: string): Promise<void> => {
   try {
-    await api.delete(`/api/v1/policeStation/${id}`);
+    await api.delete(`${basePathUrlApiV1}/policeStation/${id}`);
     toast.success("Delegacia excluída com sucesso!");
   } catch (error) {
     console.error('Delete police station error:', error);

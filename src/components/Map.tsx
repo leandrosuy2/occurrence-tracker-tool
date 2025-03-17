@@ -18,6 +18,7 @@ interface MapProps {
   zoom?: number;
   onLocationSelect?: (lat: number, lng: number) => void;
   selectionMode?: boolean;
+  height?: string;
 }
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoibGVhbmRyb3N1eSIsImEiOiJjbTg4YWZxcTMwZzhlMm9vZ3dtcjJoMGYzIn0.GjzYAyM1SGFYepf8qDqebg";
@@ -28,7 +29,8 @@ const Map: React.FC<MapProps> = ({
   center = [-47.9292, -15.7801], // Brasília como padrão
   zoom = 10,
   onLocationSelect,
-  selectionMode = false
+  selectionMode = false,
+  height = "h-full"
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -98,6 +100,15 @@ const Map: React.FC<MapProps> = ({
     
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     
+    // Resize mapa quando o container mudar de tamanho
+    const resizeHandler = () => {
+      if (map.current) {
+        map.current.resize();
+      }
+    };
+    
+    window.addEventListener('resize', resizeHandler);
+    
     if (selectionMode) {
       // Em modo de seleção, permitir clique no mapa para selecionar localização
       map.current.on('click', (e) => {
@@ -166,18 +177,34 @@ const Map: React.FC<MapProps> = ({
           )
           .addTo(map.current!);
       });
+      
+      // Adicionar o marcador de seleção se já temos uma localização e estamos em modo de seleção
+      if (selectionMode && selectedLocation) {
+        const el = document.createElement('div');
+        el.className = 'selection-marker';
+        el.style.width = '20px';
+        el.style.height = '20px';
+        el.style.borderRadius = '50%';
+        el.style.backgroundColor = '#1E88E5';
+        el.style.border = '2px solid white';
+        
+        markerRef.current = new mapboxgl.Marker(el)
+          .setLngLat(selectedLocation)
+          .addTo(map.current);
+      }
     });
     
     return () => {
+      window.removeEventListener('resize', resizeHandler);
       map.current?.remove();
     };
   }, [center, zoom, occurrences, policeStations, selectionMode, onLocationSelect]);
   
   return (
-    <div className="relative w-full h-[600px] rounded-lg overflow-hidden shadow-lg">
+    <div className={`relative w-full ${height} rounded-lg overflow-hidden shadow-lg`}>
       <div ref={mapContainer} className="absolute inset-0" />
       {selectionMode && (
-        <div className="absolute top-2 left-2 bg-white p-2 rounded-md shadow-md z-10">
+        <div className="absolute top-2 left-2 bg-white p-2 rounded-md shadow-md z-10 max-w-[200px]">
           <p className="text-sm text-gray-700">Clique no mapa para selecionar a localização</p>
           {selectedLocation && (
             <p className="text-xs text-gray-500 mt-1">

@@ -11,6 +11,7 @@ import Map from "./Map";
 import occurrenceService from "@/services/occurrenceService";
 import policeStationService from "@/services/policeStationService";
 import { Occurrence, PoliceStation } from "@/types";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 interface OccurrenceFormProps {
   occurrence?: Occurrence;
@@ -36,6 +37,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
   const [policeStations, setPoliceStations] = useState<PoliceStation[]>([]);
   const [loading, setLoading] = useState(false);
   const [locationSelected, setLocationSelected] = useState(Boolean(occurrence));
+  const [gettingLocation, setGettingLocation] = useState(false);
 
   useEffect(() => {
     const fetchPoliceStations = async () => {
@@ -54,7 +56,35 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
     };
     
     fetchPoliceStations();
-  }, [policeStationId]);
+    
+    // Se não for edição, tenta pegar a localização atual
+    if (!occurrence) {
+      getCurrentLocation();
+    }
+  }, [policeStationId, occurrence]);
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      setGettingLocation(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLatitude(position.coords.latitude);
+          setLongitude(position.coords.longitude);
+          setLocationSelected(true);
+          setGettingLocation(false);
+          toast.success("Localização atual obtida com sucesso");
+        },
+        (error) => {
+          console.error("Erro ao obter localização:", error);
+          setGettingLocation(false);
+          toast.error("Não foi possível obter sua localização atual. Selecione manualmente no mapa.");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      toast.error("Seu navegador não suporta geolocalização. Selecione manualmente no mapa.");
+    }
+  };
 
   const handleLocationSelect = (lat: number, lng: number) => {
     setLatitude(lat);
@@ -109,7 +139,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle>{occurrence ? 'Editar Ocorrência' : 'Nova Ocorrência'}</CardTitle>
       </CardHeader>
@@ -185,6 +215,25 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2 flex items-end">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={getCurrentLocation}
+                disabled={gettingLocation}
+                className="w-full"
+              >
+                {gettingLocation ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Obtendo localização...
+                  </>
+                ) : (
+                  "Usar minha localização atual"
+                )}
+              </Button>
+            </div>
           </div>
           
           <div className="space-y-2">
@@ -200,8 +249,16 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label>Localização (clique no mapa para selecionar)</Label>
-            <div className="border rounded-md overflow-hidden">
+            <Label className="flex items-center gap-2">
+              Localização
+              {!locationSelected && (
+                <span className="text-xs text-red-500 font-normal flex items-center">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Clique no mapa para selecionar
+                </span>
+              )}
+            </Label>
+            <div className="border rounded-md overflow-hidden h-[300px] md:h-[400px]">
               <Map
                 center={longitude && latitude ? [longitude, latitude] : undefined}
                 zoom={longitude && latitude ? 13 : 10}
@@ -217,17 +274,19 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
           </div>
         </CardContent>
         
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex flex-col sm:flex-row gap-4 justify-between">
           <Button 
             type="button" 
             variant="outline" 
             onClick={onCancel}
+            className="w-full sm:w-auto"
           >
             Cancelar
           </Button>
           <Button 
             type="submit" 
             disabled={loading || !locationSelected}
+            className="w-full sm:w-auto"
           >
             {loading ? 'Salvando...' : occurrence ? 'Atualizar' : 'Registrar'}
           </Button>

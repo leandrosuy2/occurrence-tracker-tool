@@ -1,11 +1,11 @@
 
-import api from './api';
+import api, { basePathUrlApiV1 } from './api';
 import { User } from '../types';
 import { toast } from "sonner";
 
 const getAllUsers = async (): Promise<User[]> => {
   try {
-    const response = await api.get('/api/v1/users');
+    const response = await api.get(`${basePathUrlApiV1}/users`);
     return response.data;
   } catch (error) {
     console.error('Get all users error:', error);
@@ -16,7 +16,7 @@ const getAllUsers = async (): Promise<User[]> => {
 
 const getUserById = async (id: string): Promise<User> => {
   try {
-    const response = await api.get(`/api/v1/users/${id}`);
+    const response = await api.get(`${basePathUrlApiV1}/users/${id}`);
     return response.data;
   } catch (error) {
     console.error('Get user by id error:', error);
@@ -27,7 +27,7 @@ const getUserById = async (id: string): Promise<User> => {
 
 const getUserProfile = async (): Promise<User> => {
   try {
-    const response = await api.get('/api/v1/users/profile');
+    const response = await api.get(`${basePathUrlApiV1}/users/profile`);
     return response.data;
   } catch (error) {
     console.error('Get user profile error:', error);
@@ -38,7 +38,7 @@ const getUserProfile = async (): Promise<User> => {
 
 const createUser = async (formData: FormData): Promise<User> => {
   try {
-    const response = await api.post('/api/v1/users/save', formData, {
+    const response = await api.post(`${basePathUrlApiV1}/users/save`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -54,7 +54,7 @@ const createUser = async (formData: FormData): Promise<User> => {
 
 const updateUser = async (id: string, formData: FormData): Promise<User> => {
   try {
-    const response = await api.put(`/api/v1/users/${id}`, formData, {
+    const response = await api.put(`${basePathUrlApiV1}/users/${id}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -70,7 +70,7 @@ const updateUser = async (id: string, formData: FormData): Promise<User> => {
 
 const updateSelf = async (formData: FormData): Promise<User> => {
   try {
-    const response = await api.put('/api/v1/users/self', formData, {
+    const response = await api.put(`${basePathUrlApiV1}/users/self`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -86,7 +86,7 @@ const updateSelf = async (formData: FormData): Promise<User> => {
 
 const deleteUser = async (id: string): Promise<void> => {
   try {
-    await api.delete(`/api/v1/users/${id}`);
+    await api.delete(`${basePathUrlApiV1}/users/${id}`);
     toast.success("Usuário excluído com sucesso!");
   } catch (error) {
     console.error('Delete user error:', error);
@@ -97,7 +97,7 @@ const deleteUser = async (id: string): Promise<void> => {
 
 const deleteSelf = async (): Promise<void> => {
   try {
-    await api.delete('/api/v1/users/self');
+    await api.delete(`${basePathUrlApiV1}/users/self`);
     toast.success("Conta excluída com sucesso!");
     localStorage.removeItem('token');
     localStorage.removeItem('user');
