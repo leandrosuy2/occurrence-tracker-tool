@@ -25,6 +25,17 @@ const getUserById = async (id: string): Promise<User> => {
   }
 };
 
+const getUserProfile = async (): Promise<User> => {
+  try {
+    const response = await api.get(`${basePathUrlApiV1}/users/profile`);
+    return response.data;
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    toast.error("Erro ao buscar perfil de usuário.");
+    throw error;
+  }
+};
+
 const updateUser = async (id: string, userData: Partial<User>): Promise<User> => {
   try {
     const response = await api.put(`${basePathUrlApiV1}/users/${id}`, userData);
@@ -33,6 +44,18 @@ const updateUser = async (id: string, userData: Partial<User>): Promise<User> =>
   } catch (error) {
     console.error('Update user error:', error);
     toast.error("Erro ao atualizar usuário.");
+    throw error;
+  }
+};
+
+const updateSelf = async (userData: Partial<User>): Promise<User> => {
+  try {
+    const response = await api.put(`${basePathUrlApiV1}/users/profile`, userData);
+    toast.success("Perfil atualizado com sucesso!");
+    return response.data;
+  } catch (error) {
+    console.error('Update self error:', error);
+    toast.error("Erro ao atualizar perfil.");
     throw error;
   }
 };
@@ -49,6 +72,18 @@ const updateUserRole = async (id: string, role: string): Promise<User> => {
   }
 };
 
+const createUser = async (userData: FormData): Promise<User> => {
+  try {
+    const response = await api.post(`${basePathUrlApiV1}/users`, userData);
+    toast.success("Usuário criado com sucesso!");
+    return response.data;
+  } catch (error) {
+    console.error('Create user error:', error);
+    toast.error("Erro ao criar usuário.");
+    throw error;
+  }
+};
+
 const deleteUser = async (id: string): Promise<void> => {
   try {
     await api.delete(`${basePathUrlApiV1}/users/${id}`);
@@ -60,12 +95,27 @@ const deleteUser = async (id: string): Promise<void> => {
   }
 };
 
+const deleteSelf = async (): Promise<void> => {
+  try {
+    await api.delete(`${basePathUrlApiV1}/users/profile`);
+    toast.success("Sua conta foi excluída com sucesso!");
+  } catch (error) {
+    console.error('Delete self error:', error);
+    toast.error("Erro ao excluir sua conta.");
+    throw error;
+  }
+};
+
 const userService = {
   getAllUsers,
   getUserById,
+  getUserProfile,
   updateUser,
+  updateSelf,
   updateUserRole,
-  deleteUser
+  createUser,
+  deleteUser,
+  deleteSelf
 };
 
 export default userService;

@@ -25,7 +25,8 @@ import {
   Plus, 
   Edit, 
   Trash2, 
-  MapPin 
+  MapPin,
+  List 
 } from 'lucide-react';
 import OccurrenceForm from '@/components/OccurrenceForm';
 import Map from '@/components/Map';
@@ -42,6 +43,8 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Occurrences: React.FC = () => {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
@@ -52,6 +55,9 @@ const Occurrences: React.FC = () => {
   const [selectedOccurrence, setSelectedOccurrence] = useState<Occurrence | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [occurrenceToDelete, setOccurrenceToDelete] = useState<string | null>(null);
+  const [isMobileListing, setIsMobileListing] = useState(false);
+  
+  const isMobile = useIsMobile();
 
   const fetchData = async () => {
     try {
@@ -130,6 +136,64 @@ const Occurrences: React.FC = () => {
       default: return 'Outros';
     }
   };
+  
+  // Mobile card list view for occurrences
+  const OccurrenceCard = ({ occurrence }: { occurrence: Occurrence }) => (
+    <Card className="mb-4">
+      <CardContent className="pt-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              {getOccurrenceTypeIcon(occurrence.type)}
+              <span className="font-medium">{getOccurrenceTypeText(occurrence.type)}</span>
+            </div>
+            <h3 className="font-semibold text-lg">{occurrence.title}</h3>
+            <div className="text-sm text-gray-500 mt-1">
+              <p>{occurrence.date} às {occurrence.time}</p>
+            </div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleMapClick(occurrence)}>
+                <MapPin className="h-4 w-4 mr-2" />
+                Ver no mapa
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEditClick(occurrence)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleDeleteClick(occurrence.id)}
+                className="text-red-600"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        
+        <p className="text-sm mt-2 line-clamp-2">{occurrence.description}</p>
+        
+        <div className="mt-4">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="flex items-center gap-1 p-0" 
+            onClick={() => handleMapClick(occurrence)}
+          >
+            <MapPin className="h-4 w-4" />
+            <span>Ver no mapa</span>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-6">
@@ -140,13 +204,24 @@ const Occurrences: React.FC = () => {
             Gerencie suas ocorrências registradas
           </p>
         </div>
-        <Button 
-          onClick={handleCreateClick} 
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Nova Ocorrência
-        </Button>
+        <div className="flex gap-2">
+          {isMobile && (
+            <Button 
+              onClick={() => setIsMobileListing(!isMobileListing)} 
+              variant="outline"
+              size="icon"
+            >
+              {isMobileListing ? <List className="h-4 w-4" /> : <List className="h-4 w-4" />}
+            </Button>
+          )}
+          <Button 
+            onClick={handleCreateClick} 
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            {!isMobile && "Nova Ocorrência"}
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -169,126 +244,189 @@ const Occurrences: React.FC = () => {
                 Registrar nova ocorrência
               </Button>
             </div>
+          ) : isMobile ? (
+            // Mobile card list view
+            <div className="space-y-2">
+              {occurrences.map(occurrence => (
+                <OccurrenceCard key={occurrence.id} occurrence={occurrence} />
+              ))}
+            </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Hora</TableHead>
-                  <TableHead>Localização</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {occurrences.map((occurrence) => (
-                  <TableRow key={occurrence.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getOccurrenceTypeIcon(occurrence.type)}
-                        <span>{getOccurrenceTypeText(occurrence.type)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{occurrence.title}</TableCell>
-                    <TableCell>{occurrence.date}</TableCell>
-                    <TableCell>{occurrence.time}</TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="flex items-center gap-1" 
-                        onClick={() => handleMapClick(occurrence)}
-                      >
-                        <MapPin className="h-4 w-4" />
-                        <span>Ver no mapa</span>
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditClick(occurrence)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteClick(occurrence.id)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+            // Desktop table view
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Título</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Hora</TableHead>
+                    <TableHead>Localização</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {occurrences.map((occurrence) => (
+                    <TableRow key={occurrence.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getOccurrenceTypeIcon(occurrence.type)}
+                          <span>{getOccurrenceTypeText(occurrence.type)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{occurrence.title}</TableCell>
+                      <TableCell>{occurrence.date}</TableCell>
+                      <TableCell>{occurrence.time}</TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="flex items-center gap-1" 
+                          onClick={() => handleMapClick(occurrence)}
+                        >
+                          <MapPin className="h-4 w-4" />
+                          <span>Ver no mapa</span>
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClick(occurrence)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteClick(occurrence.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-4xl">
-          <OccurrenceForm 
-            occurrence={selectedOccurrence || undefined}
-            onSuccess={() => {
-              setIsFormOpen(false);
-              fetchData();
-            }}
-            onCancel={() => setIsFormOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Map Dialog */}
-      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
-        <DialogContent className="max-w-4xl">
-          <h2 className="text-xl font-semibold mb-4">
-            {selectedOccurrence?.title}
-          </h2>
-          <div className="mb-4">
-            <p className="text-muted-foreground">
-              {selectedOccurrence?.description}
-            </p>
-            <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-              <span>Data: {selectedOccurrence?.date}</span>
-              <span>Hora: {selectedOccurrence?.time}</span>
-              <span>Tipo: {getOccurrenceTypeText(selectedOccurrence?.type || '')}</span>
-            </div>
-          </div>
-          {selectedOccurrence && (
-            <Map 
-              occurrences={[selectedOccurrence]}
-              policeStations={policeStations}
-              center={[selectedOccurrence.longitude, selectedOccurrence.latitude]}
-              zoom={14}
+      {/* Form Dialog/Sheet (responsive) */}
+      {isMobile ? (
+        <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <SheetContent side="bottom" className="h-[90vh] overflow-y-auto pt-6 max-w-none">
+            <OccurrenceForm 
+              occurrence={selectedOccurrence || undefined}
+              onSuccess={() => {
+                setIsFormOpen(false);
+                fetchData();
+              }}
+              onCancel={() => setIsFormOpen(false)}
             />
-          )}
-        </DialogContent>
-      </Dialog>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <OccurrenceForm 
+              occurrence={selectedOccurrence || undefined}
+              onSuccess={() => {
+                setIsFormOpen(false);
+                fetchData();
+              }}
+              onCancel={() => setIsFormOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Map Dialog/Sheet (responsive) */}
+      {isMobile ? (
+        <Sheet open={isMapOpen} onOpenChange={setIsMapOpen}>
+          <SheetContent side="bottom" className="h-[80vh] pt-6 max-w-none">
+            <div className="h-full flex flex-col">
+              <h2 className="text-xl font-semibold mb-2">
+                {selectedOccurrence?.title}
+              </h2>
+              <div className="mb-2">
+                <p className="text-muted-foreground text-sm">
+                  {selectedOccurrence?.description}
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
+                  <span>Data: {selectedOccurrence?.date}</span>
+                  <span>Hora: {selectedOccurrence?.time}</span>
+                  <span>Tipo: {getOccurrenceTypeText(selectedOccurrence?.type || '')}</span>
+                </div>
+              </div>
+              {selectedOccurrence && (
+                <div className="flex-1 -mx-6 -mb-8">
+                  <Map 
+                    occurrences={[selectedOccurrence]}
+                    policeStations={policeStations}
+                    center={[selectedOccurrence.longitude, selectedOccurrence.latitude]}
+                    zoom={14}
+                    height="h-full"
+                    getUserLocation={true}
+                  />
+                </div>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+            <h2 className="text-xl font-semibold mb-4">
+              {selectedOccurrence?.title}
+            </h2>
+            <div className="mb-4">
+              <p className="text-muted-foreground">
+                {selectedOccurrence?.description}
+              </p>
+              <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                <span>Data: {selectedOccurrence?.date}</span>
+                <span>Hora: {selectedOccurrence?.time}</span>
+                <span>Tipo: {getOccurrenceTypeText(selectedOccurrence?.type || '')}</span>
+              </div>
+            </div>
+            {selectedOccurrence && (
+              <div className="h-[500px]">
+                <Map 
+                  occurrences={[selectedOccurrence]}
+                  policeStations={policeStations}
+                  center={[selectedOccurrence.longitude, selectedOccurrence.latitude]}
+                  zoom={14}
+                  height="h-full"
+                  getUserLocation={true}
+                />
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[90vw] md:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Ocorrência</AlertDialogTitle>
             <AlertDialogDescription>
               Você tem certeza que deseja excluir esta ocorrência? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col space-y-2 sm:space-y-0 sm:flex-row">
+            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
             >
               Excluir
             </AlertDialogAction>

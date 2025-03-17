@@ -11,6 +11,7 @@ import notificationService from '@/services/notificationService';
 import { OccurrenceStats, Occurrence, PoliceStation } from '@/types';
 import { toast } from 'sonner';
 import { useInterval } from '@/hooks/use-interval';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<OccurrenceStats | null>(null);
@@ -19,6 +20,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   const isAdmin = authService.isAdmin();
+  const isMobile = useIsMobile();
 
   const fetchOccurrences = useCallback(async () => {
     try {
@@ -69,34 +71,38 @@ const Dashboard: React.FC = () => {
   // Get numeric values for stats or default to 0
   const getAllCount = () => {
     if (!stats) return 0;
+    if (stats.all === null) return 0;
     if (typeof stats.all === 'object' && stats.all !== null) {
-      return 'count' in stats.all ? (stats.all as any).count : 0;
+      return 'count' in stats.all ? Number(stats.all.count) : 0;
     }
-    return stats.all || 0;
+    return Number(stats.all) || 0;
   };
   
   const getSelfCount = () => {
     if (!stats) return 0;
+    if (stats.self === null) return 0;
     if (typeof stats.self === 'object' && stats.self !== null) {
-      return 'count' in stats.self ? (stats.self as any).count : 0;
+      return 'count' in stats.self ? Number(stats.self.count) : 0;
     }
-    return stats.self || 0;
+    return Number(stats.self) || 0;
   };
   
   const getMurdersCount = () => {
     if (!stats) return 0;
+    if (stats.murders === null) return 0;
     if (typeof stats.murders === 'object' && stats.murders !== null) {
-      return 'count' in stats.murders ? (stats.murders as any).count : 0;
+      return 'count' in stats.murders ? Number(stats.murders.count) : 0;
     }
-    return stats.murders || 0;
+    return Number(stats.murders) || 0;
   };
   
   const getTheftsCount = () => {
     if (!stats) return 0;
+    if (stats.thefts === null) return 0;
     if (typeof stats.thefts === 'object' && stats.thefts !== null) {
-      return 'count' in stats.thefts ? (stats.thefts as any).count : 0;
+      return 'count' in stats.thefts ? Number(stats.thefts.count) : 0;
     }
-    return stats.thefts || 0;
+    return Number(stats.thefts) || 0;
   };
 
   return (
@@ -108,7 +114,7 @@ const Dashboard: React.FC = () => {
         </p>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total de Ocorrências"
           value={getAllCount()}
@@ -145,14 +151,15 @@ const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="h-[600px] w-full flex items-center justify-center">
+              <div className="h-[300px] md:h-[400px] lg:h-[600px] w-full flex items-center justify-center">
                 <p>Carregando mapa...</p>
               </div>
             ) : (
               <Map 
                 occurrences={occurrences} 
                 policeStations={policeStations}
-                height="h-[600px]" 
+                height={isMobile ? "h-[300px]" : "h-[600px]"}
+                getUserLocation={true}
               />
             )}
           </CardContent>

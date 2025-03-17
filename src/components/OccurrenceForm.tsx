@@ -12,6 +12,7 @@ import occurrenceService from "@/services/occurrenceService";
 import policeStationService from "@/services/policeStationService";
 import { Occurrence, PoliceStation } from "@/types";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface OccurrenceFormProps {
   occurrence?: Occurrence;
@@ -38,6 +39,8 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [locationSelected, setLocationSelected] = useState(Boolean(occurrence));
   const [gettingLocation, setGettingLocation] = useState(false);
+  
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchPoliceStations = async () => {
@@ -57,7 +60,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
     
     fetchPoliceStations();
     
-    // Se não for edição, tenta pegar a localização atual
+    // If not editing, try to get current location
     if (!occurrence) {
       getCurrentLocation();
     }
@@ -139,8 +142,8 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
+    <Card className="w-full mx-auto max-h-[80vh] overflow-y-auto">
+      <CardHeader className="sticky top-0 z-10 bg-card">
         <CardTitle>{occurrence ? 'Editar Ocorrência' : 'Nova Ocorrência'}</CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -166,7 +169,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position={isMobile ? "popper" : "item-aligned"}>
                   <SelectItem value="homicidio">Homicídio</SelectItem>
                   <SelectItem value="furto">Furto</SelectItem>
                   <SelectItem value="roubo">Roubo</SelectItem>
@@ -206,7 +209,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a delegacia" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position={isMobile ? "popper" : "item-aligned"} className="max-h-[200px]">
                   {policeStations.map((station) => (
                     <SelectItem key={station.id} value={station.id}>
                       {station.name}
@@ -258,12 +261,13 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                 </span>
               )}
             </Label>
-            <div className="border rounded-md overflow-hidden h-[300px] md:h-[400px]">
+            <div className="border rounded-md overflow-hidden h-[250px] sm:h-[300px] md:h-[350px]">
               <Map
                 center={longitude && latitude ? [longitude, latitude] : undefined}
                 zoom={longitude && latitude ? 13 : 10}
                 onLocationSelect={handleLocationSelect}
                 selectionMode={true}
+                getUserLocation={!locationSelected}
               />
             </div>
             {locationSelected && (
@@ -274,7 +278,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
           </div>
         </CardContent>
         
-        <CardFooter className="flex flex-col sm:flex-row gap-4 justify-between">
+        <CardFooter className="flex flex-col sm:flex-row gap-4 justify-between sticky bottom-0 bg-card pt-4 border-t">
           <Button 
             type="button" 
             variant="outline" 

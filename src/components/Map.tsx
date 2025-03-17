@@ -8,7 +8,8 @@ import {
   ShieldAlert, 
   MapPin, 
   AlertCircle,
-  CircleAlert
+  CircleAlert,
+  Loader2
 } from 'lucide-react';
 
 interface MapProps {
@@ -19,6 +20,7 @@ interface MapProps {
   onLocationSelect?: (lat: number, lng: number) => void;
   selectionMode?: boolean;
   height?: string;
+  getUserLocation?: boolean;
 }
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoibGVhbmRyb3N1eSIsImEiOiJjbTg4YWZxcTMwZzhlMm9vZ3dtcjJoMGYzIn0.GjzYAyM1SGFYepf8qDqebg";
@@ -30,12 +32,15 @@ const Map: React.FC<MapProps> = ({
   zoom = 10,
   onLocationSelect,
   selectionMode = false,
-  height = "h-full"
+  height = "h-full",
+  getUserLocation = true
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<[number, number] | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const [loadingLocation, setLoadingLocation] = useState(false);
   
   // Create marker elements for different occurrence types
   const createMarkerElement = (type: string) => {
@@ -85,22 +90,114 @@ const Map: React.FC<MapProps> = ({
     return el;
   };
   
+  const createUserLocationMarker = () => {
+    const el = document.createElement('div');
+    el.className = 'user-location-marker';
+    el.style.width = '20px';
+    el.style.height = '20px';
+    el.style.backgroundColor = '#4285F4';
+    el.style.borderRadius = '50%';
+    el.style.border = '3px solid white';
+    el.style.boxShadow = '0 0 0 2px rgba(66, 133, 244, 0.3)';
+    
+    // Add a pulsing effect
+    const pulse = document.createElement('div');
+    pulse.style.position = 'absolute';
+    pulse.style.top = '-10px';
+    pulse.style.left = '-10px';
+    pulse.style.width = '40px';
+    pulse.style.height = '40px';
+    pulse.style.borderRadius = '50%';
+    pulse.style.backgroundColor = 'rgba(66, 133, 244, 0.3)';
+    pulse.style.animation = 'pulse 1.5s infinite';
+    
+    // Add the keyframes for the pulse animation
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @keyframes pulse {
+        0% { transform: scale(0.8); opacity: 0.8; }
+        70% { transform: scale(1.2); opacity: 0; }
+        100% { transform: scale(0.8); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    el.appendChild(pulse);
+    
+    return el;
+  };
+  
+  const getUserCurrentLocation = () => {
+    if (navigator.geolocation) {
+      setLoadingLocation(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          // If map is loaded, add or update user location marker
+          if (map.current) {
+            if (userLocationMarkerRef.current) {
+              userLocationMarkerRef.current.setLngLat([longitude, latitude]);
+            } else {
+              const el = createUserLocationMarker();
+              userLocationMarkerRef.current = new mapboxgl.Marker(el)
+                .setLngLat([longitude, latitude])
+                .addTo(map.current);
+              
+              // Center map on user location if no specific center was provided
+              if (!center || center[0] === -47.9292) { // If it's the default center
+                map.current.flyTo({
+                  center: [longitude, latitude],
+                  zoom: 14,
+                  speed: 1.5
+                });
+              }
+            }
+          }
+          
+          // If in selection mode, update selected location
+          if (selectionMode && onLocationSelect) {
+            setSelectedLocation([longitude, latitude]);
+            onLocationSelect(latitude, longitude);
+          }
+          
+          setLoadingLocation(false);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setLoadingLocation(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+  };
+  
   useEffect(() => {
     if (!mapContainer.current) return;
     
-    // Inicializar mapa com o token fornecido
+    // Initialize map with the token provided
     mapboxgl.accessToken = MAPBOX_TOKEN;
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v11',
       center: center,
-      zoom: zoom
+      zoom: zoom,
+      attributionControl: false,
+      responsive: true
     });
     
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     
-    // Resize mapa quando o container mudar de tamanho
+    // Add attribution control at the bottom left on larger screens, bottom on mobile
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const attributionPosition = mediaQuery.matches ? 'bottom-left' : 'bottom';
+    map.current.addControl(new mapboxgl.AttributionControl(), attributionPosition);
+    
+    // Add scale control
+    map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
+    
+    // Resize map when the container changes size
     const resizeHandler = () => {
       if (map.current) {
         map.current.resize();
@@ -110,7 +207,7 @@ const Map: React.FC<MapProps> = ({
     window.addEventListener('resize', resizeHandler);
     
     if (selectionMode) {
-      // Em modo de seleção, permitir clique no mapa para selecionar localização
+      // In selection mode, allow click on map to select location
       map.current.on('click', (e) => {
         const { lng, lat } = e.lngLat;
         setSelectedLocation([lng, lat]);
@@ -140,14 +237,14 @@ const Map: React.FC<MapProps> = ({
     map.current.on('load', () => {
       if (!map.current) return;
       
-      // Adicionar ocorrências ao mapa
+      // Add occurrences to map
       occurrences.forEach(occurrence => {
         const el = createMarkerElement(occurrence.type);
         
         new mapboxgl.Marker(el)
           .setLngLat([occurrence.longitude, occurrence.latitude])
           .setPopup(
-            new mapboxgl.Popup({ offset: 25 })
+            new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
               .setHTML(
                 `<div class="p-2">
                   <h3 class="text-base font-semibold mb-1">${occurrence.title}</h3>
@@ -159,14 +256,14 @@ const Map: React.FC<MapProps> = ({
           .addTo(map.current!);
       });
       
-      // Adicionar delegacias ao mapa
+      // Add police stations to map
       policeStations.forEach(station => {
         const el = createPoliceStationMarker();
         
         new mapboxgl.Marker(el)
           .setLngLat([station.longitude, station.latitude])
           .setPopup(
-            new mapboxgl.Popup({ offset: 25 })
+            new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
               .setHTML(
                 `<div class="p-2">
                   <h3 class="text-base font-semibold mb-1">${station.name}</h3>
@@ -178,7 +275,7 @@ const Map: React.FC<MapProps> = ({
           .addTo(map.current!);
       });
       
-      // Adicionar o marcador de seleção se já temos uma localização e estamos em modo de seleção
+      // Add the selection marker if we already have a location and are in selection mode
       if (selectionMode && selectedLocation) {
         const el = document.createElement('div');
         el.className = 'selection-marker';
@@ -192,19 +289,25 @@ const Map: React.FC<MapProps> = ({
           .setLngLat(selectedLocation)
           .addTo(map.current);
       }
+      
+      // Get user location if needed
+      if (getUserLocation) {
+        getUserCurrentLocation();
+      }
     });
     
     return () => {
       window.removeEventListener('resize', resizeHandler);
       map.current?.remove();
     };
-  }, [center, zoom, occurrences, policeStations, selectionMode, onLocationSelect]);
+  }, [center, zoom, occurrences, policeStations, selectionMode, onLocationSelect, getUserLocation]);
   
   return (
     <div className={`relative w-full ${height} rounded-lg overflow-hidden shadow-lg`}>
       <div ref={mapContainer} className="absolute inset-0" />
+      
       {selectionMode && (
-        <div className="absolute top-2 left-2 bg-white p-2 rounded-md shadow-md z-10 max-w-[200px]">
+        <div className="absolute top-2 left-2 bg-white p-2 rounded-md shadow-md z-10 max-w-[200px] sm:max-w-[300px]">
           <p className="text-sm text-gray-700">Clique no mapa para selecionar a localização</p>
           {selectedLocation && (
             <p className="text-xs text-gray-500 mt-1">
@@ -212,6 +315,21 @@ const Map: React.FC<MapProps> = ({
             </p>
           )}
         </div>
+      )}
+      
+      {getUserLocation && (
+        <button 
+          onClick={getUserCurrentLocation}
+          className="absolute bottom-2 right-2 z-10 bg-white p-2 rounded-full shadow-md hover:bg-gray-100 transition-colors"
+          title="Ir para minha localização"
+          aria-label="Ir para minha localização"
+        >
+          {loadingLocation ? (
+            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+          ) : (
+            <MapPin className="h-5 w-5 text-blue-500" />
+          )}
+        </button>
       )}
     </div>
   );
