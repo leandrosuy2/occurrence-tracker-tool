@@ -14,6 +14,8 @@ import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Occurrences from "./pages/Occurrences";
 import Users from "./pages/Users";
+import PoliceStations from "./pages/PoliceStations";
+import Permissions from "./pages/Permissions";
 
 const queryClient = new QueryClient();
 
@@ -46,9 +48,6 @@ const App = () => (
                 <Users />
               </ProtectedRoute>
             } />
-            
-            {/* Add other admin routes when implemented */}
-            {/* 
             <Route path="delegacias" element={
               <ProtectedRoute requireAdmin={true}>
                 <PoliceStations />
@@ -58,8 +57,7 @@ const App = () => (
               <ProtectedRoute requireAdmin={true}>
                 <Permissions />
               </ProtectedRoute>
-            } /> 
-            */}
+            } />
           </Route>
           
           {/* Catch-all route */}

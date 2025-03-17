@@ -1,7 +1,7 @@
 
 import api, { basePathUrlApiV1 } from './api';
 import { User } from '../types';
-import { toast } from "sonner";
+import { toast } from 'sonner';
 
 const getAllUsers = async (): Promise<User[]> => {
   try {
@@ -25,40 +25,9 @@ const getUserById = async (id: string): Promise<User> => {
   }
 };
 
-const getUserProfile = async (): Promise<User> => {
+const updateUser = async (id: string, userData: Partial<User>): Promise<User> => {
   try {
-    const response = await api.get(`${basePathUrlApiV1}/users/profile`);
-    return response.data;
-  } catch (error) {
-    console.error('Get user profile error:', error);
-    toast.error("Erro ao buscar perfil do usuário.");
-    throw error;
-  }
-};
-
-const createUser = async (formData: FormData): Promise<User> => {
-  try {
-    const response = await api.post(`${basePathUrlApiV1}/users/save`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    toast.success("Usuário criado com sucesso!");
-    return response.data;
-  } catch (error) {
-    console.error('Create user error:', error);
-    toast.error("Erro ao criar usuário.");
-    throw error;
-  }
-};
-
-const updateUser = async (id: string, formData: FormData): Promise<User> => {
-  try {
-    const response = await api.put(`${basePathUrlApiV1}/users/${id}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await api.put(`${basePathUrlApiV1}/users/${id}`, userData);
     toast.success("Usuário atualizado com sucesso!");
     return response.data;
   } catch (error) {
@@ -68,18 +37,14 @@ const updateUser = async (id: string, formData: FormData): Promise<User> => {
   }
 };
 
-const updateSelf = async (formData: FormData): Promise<User> => {
+const updateUserRole = async (id: string, role: string): Promise<User> => {
   try {
-    const response = await api.put(`${basePathUrlApiV1}/users/self`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    toast.success("Perfil atualizado com sucesso!");
+    const response = await api.put(`${basePathUrlApiV1}/users/${id}/role`, { role });
+    toast.success("Permissão do usuário atualizada com sucesso!");
     return response.data;
   } catch (error) {
-    console.error('Update self error:', error);
-    toast.error("Erro ao atualizar perfil.");
+    console.error('Update user role error:', error);
+    toast.error("Erro ao atualizar permissão do usuário.");
     throw error;
   }
 };
@@ -95,28 +60,12 @@ const deleteUser = async (id: string): Promise<void> => {
   }
 };
 
-const deleteSelf = async (): Promise<void> => {
-  try {
-    await api.delete(`${basePathUrlApiV1}/users/self`);
-    toast.success("Conta excluída com sucesso!");
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-  } catch (error) {
-    console.error('Delete self error:', error);
-    toast.error("Erro ao excluir conta.");
-    throw error;
-  }
-};
-
 const userService = {
   getAllUsers,
   getUserById,
-  getUserProfile,
-  createUser,
   updateUser,
-  updateSelf,
-  deleteUser,
-  deleteSelf
+  updateUserRole,
+  deleteUser
 };
 
 export default userService;

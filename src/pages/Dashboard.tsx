@@ -69,32 +69,32 @@ const Dashboard: React.FC = () => {
   // Get numeric values for stats or default to 0
   const getAllCount = () => {
     if (!stats) return 0;
-    if (typeof stats.all === 'object' && stats.all !== null && 'count' in stats.all) {
-      return (stats.all as any).count;
+    if (typeof stats.all === 'object' && stats.all !== null) {
+      return 'count' in stats.all ? (stats.all as any).count : 0;
     }
     return stats.all || 0;
   };
   
   const getSelfCount = () => {
     if (!stats) return 0;
-    if (typeof stats.self === 'object' && stats.self !== null && 'count' in stats.self) {
-      return (stats.self as any).count;
+    if (typeof stats.self === 'object' && stats.self !== null) {
+      return 'count' in stats.self ? (stats.self as any).count : 0;
     }
     return stats.self || 0;
   };
   
   const getMurdersCount = () => {
     if (!stats) return 0;
-    if (typeof stats.murders === 'object' && stats.murders !== null && 'count' in stats.murders) {
-      return (stats.murders as any).count;
+    if (typeof stats.murders === 'object' && stats.murders !== null) {
+      return 'count' in stats.murders ? (stats.murders as any).count : 0;
     }
     return stats.murders || 0;
   };
   
   const getTheftsCount = () => {
     if (!stats) return 0;
-    if (typeof stats.thefts === 'object' && stats.thefts !== null && 'count' in stats.thefts) {
-      return (stats.thefts as any).count;
+    if (typeof stats.thefts === 'object' && stats.thefts !== null) {
+      return 'count' in stats.thefts ? (stats.thefts as any).count : 0;
     }
     return stats.thefts || 0;
   };
@@ -151,7 +151,8 @@ const Dashboard: React.FC = () => {
             ) : (
               <Map 
                 occurrences={occurrences} 
-                policeStations={policeStations} 
+                policeStations={policeStations}
+                height="h-[600px]" 
               />
             )}
           </CardContent>
