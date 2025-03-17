@@ -18,6 +18,11 @@ const StatCard: React.FC<StatCardProps> = ({
   description,
   className,
 }) => {
+  // Make sure value is a string or number, not an object
+  const displayValue = typeof value === 'object' && value !== null 
+    ? JSON.stringify(value) 
+    : value;
+    
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -27,7 +32,7 @@ const StatCard: React.FC<StatCardProps> = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-2xl font-bold">{displayValue}</div>
         {description && (
           <p className="text-xs text-muted-foreground">{description}</p>
         )}

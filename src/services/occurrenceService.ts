@@ -68,11 +68,13 @@ const getOccurrenceStats = async (): Promise<OccurrenceStats> => {
     const murders = await api.get(`${basePathUrlApiV1}/ocurrences/count/murders`);
     const thefts = await api.get(`${basePathUrlApiV1}/ocurrences/count/thefts`);
     
+    console.log('Stats responses:', { all: all.data, self: self.data, murders: murders.data, thefts: thefts.data });
+    
     return {
-      all: all.data,
-      self: self.data,
-      murders: murders.data,
-      thefts: thefts.data
+      all: all.data.count || all.data,
+      self: self.data.count || self.data,
+      murders: murders.data.count || murders.data,
+      thefts: thefts.data.count || thefts.data
     };
   } catch (error) {
     console.error('Get occurrence stats error:', error);

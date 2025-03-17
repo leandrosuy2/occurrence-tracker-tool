@@ -66,6 +66,39 @@ const Dashboard: React.FC = () => {
     fetchOccurrences();
   }, 30000); // 30 seconds
 
+  // Get numeric values for stats or default to 0
+  const getAllCount = () => {
+    if (!stats) return 0;
+    if (typeof stats.all === 'object' && stats.all !== null && 'count' in stats.all) {
+      return (stats.all as any).count;
+    }
+    return stats.all || 0;
+  };
+  
+  const getSelfCount = () => {
+    if (!stats) return 0;
+    if (typeof stats.self === 'object' && stats.self !== null && 'count' in stats.self) {
+      return (stats.self as any).count;
+    }
+    return stats.self || 0;
+  };
+  
+  const getMurdersCount = () => {
+    if (!stats) return 0;
+    if (typeof stats.murders === 'object' && stats.murders !== null && 'count' in stats.murders) {
+      return (stats.murders as any).count;
+    }
+    return stats.murders || 0;
+  };
+  
+  const getTheftsCount = () => {
+    if (!stats) return 0;
+    if (typeof stats.thefts === 'object' && stats.thefts !== null && 'count' in stats.thefts) {
+      return (stats.thefts as any).count;
+    }
+    return stats.thefts || 0;
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -78,26 +111,26 @@ const Dashboard: React.FC = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total de Ocorrências"
-          value={stats?.all || 0}
+          value={getAllCount()}
           icon={<FileText className="h-4 w-4" />}
         />
         
         <StatCard
           title="Minhas Ocorrências"
-          value={stats?.self || 0}
+          value={getSelfCount()}
           icon={<FileText className="h-4 w-4" />}
         />
         
         <StatCard
           title="Homicídios"
-          value={stats?.murders || 0}
+          value={getMurdersCount()}
           icon={<AlertTriangle className="h-4 w-4" />}
           className="border-ocorrencia-vermelho/20"
         />
         
         <StatCard
           title="Furtos"
-          value={stats?.thefts || 0}
+          value={getTheftsCount()}
           icon={<ShieldAlert className="h-4 w-4" />}
         />
       </div>
