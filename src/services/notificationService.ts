@@ -19,22 +19,13 @@ class NotificationService {
     // Play sound
     this.playNotificationSound();
     
-    // Corrigido: Vamos usar uma string formatada em vez de JSX 
-    // para evitar problemas com o arquivo .ts (não .tsx)
-    toast.info(
-      () => (
-        <div className="flex flex-col gap-1">
-          <div className="font-medium">Nova Ocorrência: {occurrence.title}</div>
-          <div className="text-sm">Tipo: {this.formatOccurrenceType(occurrence.type)}</div>
-          <div className="text-xs">{occurrence.date} às {occurrence.time}</div>
-        </div>
-      ),
-      {
-        position: "top-right",
-        duration: 5000,
-        className: "bg-ocorrencia-azul-escuro text-white",
-      }
-    );
+    // Using a function to render content instead of JSX
+    toast.info(`Nova Ocorrência: ${occurrence.title}`, {
+      position: "top-right",
+      duration: 5000,
+      className: "bg-ocorrencia-azul-escuro text-white",
+      description: `Tipo: ${this.formatOccurrenceType(occurrence.type)} - ${occurrence.date} às ${occurrence.time}`
+    });
   }
 
   public checkForNewOccurrences(currentOccurrences: Occurrence[], onNewOccurrence?: (occurrence: Occurrence) => void) {
