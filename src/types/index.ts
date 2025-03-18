@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -28,12 +27,14 @@ export interface RegisterRequest {
 }
 
 export interface PoliceStation {
-  id: string;
+  id: number;
   name: string;
-  email: string;
-  phone: string;
   latitude: number;
   longitude: number;
+  address: string;
+  phone: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Permission {
@@ -43,17 +44,24 @@ export interface Permission {
 
 export interface Occurrence {
   id: string;
-  title: string;
-  description: string;
+  title: string | null;
+  description: string | null;
   type: 'homicidio' | 'furto' | 'roubo' | 'outros';
   latitude: number;
   longitude: number;
   date: string;
   time: string;
-  policeStation_id: string;
-  userId?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  resolved: boolean;
+  user_id: string;
+  policeStation_id: string | null;
+  created_at: string;
+  updated_at: string;
+  User?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  PoliceStation?: PoliceStation | null;
 }
 
 export interface OccurrenceStats {
@@ -61,4 +69,15 @@ export interface OccurrenceStats {
   self: number;
   murders: number;
   thefts: number;
+}
+
+export interface CreateOccurrenceDTO {
+  title?: string;
+  description?: string;
+  type?: 'homicidio' | 'furto' | 'roubo' | 'outros';
+  date: string;
+  time: string;
+  latitude: number;
+  longitude: number;
+  policeStation_id: number;
 }

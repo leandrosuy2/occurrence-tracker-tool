@@ -1,122 +1,93 @@
-import api, { basePathUrlApiV1 } from './api';
-import { Occurrence, OccurrenceStats } from '../types';
-import { toast } from "sonner";
+import api from './api';
+import { toast } from 'sonner';
+import { Occurrence, CreateOccurrenceDTO } from '@/types';
 
-const createOccurrence = async (occurrence: Omit<Occurrence, 'id'>) => {
-  try {
-    const response = await api.post(`${basePathUrlApiV1}/ocurrences/save`, occurrence);
-    toast.success("Ocorrência registrada com sucesso!");
-    return response.data;
-  } catch (error) {
-    console.error('Create occurrence error:', error);
-    toast.error("Erro ao registrar ocorrência.");
-    throw error;
-  }
-};
-
-const getUserOccurrences = async () => {
-  try {
-    const response = await api.get(`${basePathUrlApiV1}/ocurrences/self`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching user occurrences:', error);
-    toast.error('Erro ao buscar suas ocorrências');
-    throw error;
-  }
-};
-
-const getOccurrenceById = async (id: string) => {
-  try {
-    const response = await api.get(`${basePathUrlApiV1}/ocurrences/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error('Get occurrence by id error:', error);
-    toast.error("Erro ao buscar detalhes da ocorrência.");
-    throw error;
-  }
-};
-
-const updateOccurrence = async (id: string, occurrence: Partial<Occurrence>) => {
-  try {
-    const response = await api.put(`${basePathUrlApiV1}/ocurrences/${id}`, occurrence);
-    toast.success("Ocorrência atualizada com sucesso!");
-    return response.data;
-  } catch (error) {
-    console.error('Update occurrence error:', error);
-    toast.error("Erro ao atualizar ocorrência.");
-    throw error;
-  }
-};
-
-const deleteOccurrence = async (id: string) => {
-  try {
-    await api.delete(`${basePathUrlApiV1}/ocurrences/${id}`);
-    toast.success("Ocorrência excluída com sucesso!");
-    return true;
-  } catch (error) {
-    console.error('Delete occurrence error:', error);
-    toast.error("Erro ao excluir ocorrência.");
-    throw error;
-  }
-};
-
-const getOccurrenceStats = async (): Promise<OccurrenceStats> => {
-  try {
-    const all = await api.get(`${basePathUrlApiV1}/ocurrences/count/all`);
-    const self = await api.get(`${basePathUrlApiV1}/ocurrences/count/self`);
-    const murders = await api.get(`${basePathUrlApiV1}/ocurrences/count/murders`);
-    const thefts = await api.get(`${basePathUrlApiV1}/ocurrences/count/thefts`);
-    
-    console.log('Stats responses:', { all: all.data, self: self.data, murders: murders.data, thefts: thefts.data });
-    
-    return {
-      all: all.data.count || all.data,
-      self: self.data.count || self.data,
-      murders: murders.data.count || murders.data,
-      thefts: thefts.data.count || thefts.data
-    };
-  } catch (error) {
-    console.error('Get occurrence stats error:', error);
-    toast.error("Erro ao buscar estatísticas.");
-    throw error;
-  }
-};
-
-const createQuickOccurrence = async (latitude: number, longitude: number) => {
-  try {
-    const response = await api.post(`${basePathUrlApiV1}/ocurrences/quick`, {
-      latitude,
-      longitude
-    });
-    toast.success("Ocorrência rápida registrada com sucesso!");
-    return response.data;
-  } catch (error) {
-    console.error('Create quick occurrence error:', error);
-    toast.error("Erro ao registrar ocorrência rápida.");
-    throw error;
-  }
-};
-
-const getAllOccurrences = async () => {
-  try {
-    const response = await api.get(`${basePathUrlApiV1}/ocurrences`);
-    return response.data;
-  } catch (error) {
-    console.error('Get all occurrences error:', error);
-    toast.error("Erro ao buscar todas as ocorrências.");
-    throw error;
-  }
-};
+const basePathUrlApiV1 = '/api/v1';
 
 const occurrenceService = {
-  createOccurrence,
-  getUserOccurrences,
-  getOccurrenceById,
-  updateOccurrence,
-  deleteOccurrence,
-  getOccurrenceStats,
-  createQuickOccurrence,
-  getAllOccurrences
+  createOccurrence: async (data: CreateOccurrenceDTO) => {
+    try {
+      const response = await api.post(`${basePathUrlApiV1}/ocurrences/save`, data);
+      toast.success("Ocorrência registrada com sucesso!");
+      return response.data;
+    } catch (error) {
+      console.error('Error creating occurrence:', error);
+      toast.error('Erro ao criar ocorrência');
+      throw error;
+    }
+  },
+
+  getUserOccurrences: async () => {
+    try {
+      const response = await api.get(`${basePathUrlApiV1}/ocurrences/self`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user occurrences:', error);
+      toast.error('Erro ao buscar suas ocorrências');
+      throw error;
+    }
+  },
+
+  getOccurrenceById: async (id: string) => {
+    try {
+      const response = await api.get(`${basePathUrlApiV1}/ocurrences/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching occurrence:', error);
+      toast.error('Erro ao buscar ocorrência');
+      throw error;
+    }
+  },
+
+  updateOccurrence: async (id: string, data: Partial<CreateOccurrenceDTO>) => {
+    try {
+      const response = await api.put(`${basePathUrlApiV1}/ocurrences/${id}`, data);
+      toast.success("Ocorrência atualizada com sucesso!");
+      return response.data;
+    } catch (error) {
+      console.error('Error updating occurrence:', error);
+      toast.error('Erro ao atualizar ocorrência');
+      throw error;
+    }
+  },
+
+  deleteOccurrence: async (id: string) => {
+    try {
+      const response = await api.delete(`${basePathUrlApiV1}/ocurrences/${id}`);
+      toast.success("Ocorrência excluída com sucesso!");
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting occurrence:', error);
+      toast.error('Erro ao excluir ocorrência');
+      throw error;
+    }
+  },
+
+  createQuickOccurrence: async (latitude: number, longitude: number) => {
+    try {
+      const response = await api.post(`${basePathUrlApiV1}/ocurrences/quick`, {
+        latitude,
+        longitude
+      });
+      toast.success("Ocorrência rápida registrada com sucesso!");
+      return response.data;
+    } catch (error) {
+      console.error('Error creating quick occurrence:', error);
+      toast.error('Erro ao criar ocorrência rápida');
+      throw error;
+    }
+  },
+
+  getAllOccurrences: async () => {
+    try {
+      const response = await api.get(`${basePathUrlApiV1}/ocurrences`);
+      return response.data;
+    } catch (error) {
+      console.error('Get all occurrences error:', error);
+      toast.error("Erro ao buscar todas as ocorrências.");
+      throw error;
+    }
+  }
 };
 
 export default occurrenceService;

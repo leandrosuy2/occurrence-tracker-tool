@@ -23,7 +23,6 @@ const Dashboard: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // Busca as ocorrências do usuário usando a rota correta
       const response = await occurrenceService.getUserOccurrences();
       const occurrencesData = response.data || [];
       setOccurrences(occurrencesData);
@@ -31,10 +30,8 @@ const Dashboard: React.FC = () => {
       const stationsData = await policeStationService.getAllPoliceStations();
       setPoliceStations(stationsData);
 
-      // Calcula as estatísticas
       const total = occurrencesData.length;
       
-      // Calcula ocorrências dos últimos 7 dias
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const recent = occurrencesData.filter(occ => {
@@ -55,10 +52,9 @@ const Dashboard: React.FC = () => {
     fetchData();
   }, []);
 
-  // Poll for new occurrences every 30 seconds
   useInterval(() => {
     fetchData();
-  }, 30000); // 30 seconds
+  }, 30000);
 
   return (
     <div className="space-y-6">

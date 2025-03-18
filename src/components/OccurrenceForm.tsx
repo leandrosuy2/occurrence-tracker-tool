@@ -27,9 +27,9 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
 }) => {
   const [title, setTitle] = useState(occurrence?.title || '');
   const [description, setDescription] = useState(occurrence?.description || '');
-  const [type, setType] = useState<string>(occurrence?.type || 'outros');
+  const [type, setType] = useState<string>(occurrence?.type || 'Outros');
   const [date, setDate] = useState(occurrence?.date || new Date().toISOString().split('T')[0]);
-  const [time, setTime] = useState(occurrence?.time || new Date().toISOString().split('T')[1].substring(0, 5));
+  const [time, setTime] = useState(occurrence?.time || new Date().toISOString().split('T')[1].substring(0, 8));
   const [latitude, setLatitude] = useState(occurrence?.latitude || 0);
   const [longitude, setLongitude] = useState(occurrence?.longitude || 0);
   const [policeStationId, setPoliceStationId] = useState(occurrence?.policeStation_id || '');
@@ -169,20 +169,20 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent position={isMobile ? "popper" : "item-aligned"}>
-                  <SelectItem value="agressoes_brigas">Agressões ou brigas</SelectItem>
-                  <SelectItem value="acidentes_transito">Apoio em acidentes de trânsito</SelectItem>
-                  <SelectItem value="depredacao_patrimonio">Depredação do patrimônio público</SelectItem>
-                  <SelectItem value="emergencias_ambientais">Emergências ambientais</SelectItem>
-                  <SelectItem value="invasao_predios">Invasão de prédios ou terrenos públicos</SelectItem>
-                  <SelectItem value="maria_penha">Maria da Penha</SelectItem>
-                  <SelectItem value="perturbacao_sossego">Perturbação do sossego público</SelectItem>
-                  <SelectItem value="posse_armas">Posse de armas brancas ou de fogo</SelectItem>
-                  <SelectItem value="pessoa_suspeita">Pessoa suspeita</SelectItem>
-                  <SelectItem value="roubos_furtos">Roubos e furtos</SelectItem>
-                  <SelectItem value="tentativa_suicidio">Tentativa de suicídio</SelectItem>
-                  <SelectItem value="drogas">Uso e tráfico de drogas</SelectItem>
-                  <SelectItem value="violencia_domestica">Violência doméstica</SelectItem>
-                  <SelectItem value="outros">Outros</SelectItem>
+                  <SelectItem value="Agressões ou brigas">Agressões ou brigas</SelectItem>
+                  <SelectItem value="Apoio em acidentes de trânsito">Apoio em acidentes de trânsito</SelectItem>
+                  <SelectItem value="Depredação do patrimônio público">Depredação do patrimônio público</SelectItem>
+                  <SelectItem value="Emergências ambientais">Emergências ambientais</SelectItem>
+                  <SelectItem value="Invasão de prédios ou terrenos públicos">Invasão de prédios ou terrenos públicos</SelectItem>
+                  <SelectItem value="Maria da Penha">Maria da Penha</SelectItem>
+                  <SelectItem value="Perturbação do sossego público">Perturbação do sossego público</SelectItem>
+                  <SelectItem value="Posse de armas brancas ou de fogo">Posse de armas brancas ou de fogo</SelectItem>
+                  <SelectItem value="Pessoa suspeita">Pessoa suspeita</SelectItem>
+                  <SelectItem value="Roubos e furtos">Roubos e furtos</SelectItem>
+                  <SelectItem value="Tentativa de suicídio">Tentativa de suicídio</SelectItem>
+                  <SelectItem value="Uso e tráfico de drogas">Uso e tráfico de drogas</SelectItem>
+                  <SelectItem value="Violência doméstica">Violência doméstica</SelectItem>
+                  <SelectItem value="Outros">Outros</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -203,6 +203,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
               <Input
                 id="time"
                 type="time"
+                step="1"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 required

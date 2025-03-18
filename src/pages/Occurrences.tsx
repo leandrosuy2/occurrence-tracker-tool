@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
+import OccurrencesTable from '@/components/OccurrencesTable';
 
 const Occurrences: React.FC = () => {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
@@ -61,7 +62,8 @@ const Occurrences: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const occurrencesData = await occurrenceService.getUserOccurrences();
+      const response = await occurrenceService.getUserOccurrences();
+      const occurrencesData = response.data || [];
       setOccurrences(Array.isArray(occurrencesData) ? occurrencesData : []);
       
       const stationsData = await policeStationService.getAllPoliceStations();
@@ -236,85 +238,14 @@ const Occurrences: React.FC = () => {
           ) : occurrences.length === 0 ? (
             <div className="py-10 text-center">
               <p>Nenhuma ocorrência encontrada</p>
-              <Button 
-                variant="outline" 
-                className="mt-4" 
-                onClick={handleCreateClick}
-              >
-                Registrar nova ocorrência
-              </Button>
-            </div>
-          ) : isMobile ? (
-            // Mobile card list view
-            <div className="space-y-2">
-              {occurrences.map(occurrence => (
-                <OccurrenceCard key={occurrence.id} occurrence={occurrence} />
-              ))}
             </div>
           ) : (
-            // Desktop table view
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Hora</TableHead>
-                    <TableHead>Localização</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {occurrences.map((occurrence) => (
-                    <TableRow key={occurrence.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getOccurrenceTypeIcon(occurrence.type)}
-                          <span>{getOccurrenceTypeText(occurrence.type)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{occurrence.title}</TableCell>
-                      <TableCell>{occurrence.date}</TableCell>
-                      <TableCell>{occurrence.time}</TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="flex items-center gap-1" 
-                          onClick={() => handleMapClick(occurrence)}
-                        >
-                          <MapPin className="h-4 w-4" />
-                          <span>Ver no mapa</span>
-                        </Button>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditClick(occurrence)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteClick(occurrence.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <OccurrencesTable 
+              occurrences={occurrences} 
+              onUpdate={fetchData}
+              onEdit={handleEditClick}
+              onDelete={(id) => handleDeleteClick(id.toString())}
+            />
           )}
         </CardContent>
       </Card>

@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { Occurrence, PoliceStation } from '../types';
-import { 
-  AlertTriangle, 
-  ShieldAlert, 
-  MapPin, 
-  AlertCircle,
-  CircleAlert,
-  Loader2
-} from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import { Occurrence, PoliceStation } from '@/types';
+import { MapPin, AlertTriangle, Shield, FileText } from 'lucide-react';
+
+// Corrigir o problema dos ícones do Leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
+  iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href,
+  shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
+});
 
 interface MapProps {
   occurrences?: Occurrence[];
@@ -18,235 +20,99 @@ interface MapProps {
   zoom?: number;
   onLocationSelect?: (lat: number, lng: number) => void;
   selectionMode?: boolean;
-  height?: string;
   getUserLocation?: boolean;
+  height?: string;
 }
 
-const MAPBOX_TOKEN = "pk.eyJ1IjoibGVhbmRyb3N1eSIsImEiOiJjbTg4YWZxcTMwZzhlMm9vZ3dtcjJoMGYzIn0.GjzYAyM1SGFYepf8qDqebg";
+// Componente para atualizar o mapa quando o centro mudar
+const ChangeView: React.FC<{ center: [number, number]; zoom: number }> = ({ center, zoom }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+  return null;
+};
+
+// Componente para o ícone personalizado
+const CustomIcon: React.FC<{ type: string; isCurrentLocation?: boolean }> = ({ type, isCurrentLocation }) => {
+  const getIconColor = () => {
+    if (isCurrentLocation) return '#3b82f6'; // Azul para localização atual
+    switch (type) {
+      case 'homicidio':
+        return '#ef4444'; // Vermelho
+      case 'furto':
+        return '#f59e0b'; // Amarelo
+      case 'roubo':
+        return '#f97316'; // Laranja
+      default:
+        return '#3b82f6'; // Azul
+    }
+  };
+
+  const getIcon = () => {
+    if (isCurrentLocation) return <MapPin className="w-6 h-6" />;
+    switch (type) {
+      case 'homicidio':
+        return <AlertTriangle className="w-6 h-6" />;
+      case 'furto':
+      case 'roubo':
+        return <FileText className="w-6 h-6" />;
+      default:
+        return <MapPin className="w-6 h-6" />;
+    }
+  };
+
+  return (
+    <div className="relative">
+      <div 
+        className="absolute -translate-x-1/2 -translate-y-1/2"
+        style={{ color: getIconColor() }}
+      >
+        {getIcon()}
+      </div>
+      {!isCurrentLocation && (
+        <div 
+          className="absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full opacity-20"
+          style={{ backgroundColor: getIconColor() }}
+        />
+      )}
+    </div>
+  );
+};
+
+// Componente para lidar com eventos do mapa
+const MapEvents: React.FC<{ onLocationSelect?: (lat: number, lng: number) => void; selectionMode?: boolean }> = ({ 
+  onLocationSelect, 
+  selectionMode 
+}) => {
+  useMapEvents({
+    click: (e) => {
+      if (selectionMode && onLocationSelect) {
+        onLocationSelect(e.latlng.lat, e.latlng.lng);
+      }
+    }
+  });
+  return null;
+};
 
 const Map: React.FC<MapProps> = ({
   occurrences = [],
   policeStations = [],
-  center = [-47.9292, -15.7801], // Brasília como padrão
-  zoom = 10,
+  center = [-23.5505, -46.6333], // São Paulo
+  zoom = 13,
   onLocationSelect,
   selectionMode = false,
-  height = "h-full",
-  getUserLocation = true
+  getUserLocation = false,
+  height = 'h-[400px]'
 }) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<[number, number] | null>(null);
-  const markerRef = useRef<mapboxgl.Marker | null>(null);
-  const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
-  const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
-  const policeStationsRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
-  
-  // Create marker elements for different occurrence types
-  const createMarkerElement = (type: string) => {
-    const el = document.createElement('div');
-    el.className = 'marker';
-    el.style.width = '30px';
-    el.style.height = '30px';
-    el.style.borderRadius = '50%';
-    el.style.display = 'flex';
-    el.style.alignItems = 'center';
-    el.style.justifyContent = 'center';
-    
-    switch(type) {
-      case 'homicidio':
-        el.style.backgroundColor = '#E63946';
-        el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
-        break;
-      case 'furto':
-        el.style.backgroundColor = '#FFB703';
-        el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"></path><path d="M3.5 12h5"></path><path d="M6 9.5v5"></path></svg>';
-        break;
-      case 'roubo':
-        el.style.backgroundColor = '#FB8500';
-        el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
-        break;
-      default:
-        el.style.backgroundColor = '#457B9D';
-        el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
-    }
-    
-    return el;
-  };
-  
-  const createPoliceStationMarker = () => {
-    const el = document.createElement('div');
-    el.className = 'police-station-marker';
-    el.style.width = '35px';
-    el.style.height = '35px';
-    el.style.backgroundColor = '#1D3557';
-    el.style.borderRadius = '50%';
-    el.style.border = '3px solid white';
-    el.style.display = 'flex';
-    el.style.alignItems = 'center';
-    el.style.justifyContent = 'center';
-    el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 15 8-8 8 8"></path><path d="M4 22h16"></path><path d="M10 9v13"></path><path d="M14 9v13"></path></svg>';
-    
-    return el;
-  };
-  
-  const createUserLocationMarker = () => {
-    const el = document.createElement('div');
-    el.className = 'user-location-marker';
-    el.style.width = '20px';
-    el.style.height = '20px';
-    el.style.backgroundColor = '#4285F4';
-    el.style.borderRadius = '50%';
-    el.style.border = '3px solid white';
-    el.style.boxShadow = '0 0 0 2px rgba(66, 133, 244, 0.3)';
-    
-    // Add a pulsing effect
-    const pulse = document.createElement('div');
-    pulse.style.position = 'absolute';
-    pulse.style.top = '-10px';
-    pulse.style.left = '-10px';
-    pulse.style.width = '40px';
-    pulse.style.height = '40px';
-    pulse.style.borderRadius = '50%';
-    pulse.style.backgroundColor = 'rgba(66, 133, 244, 0.3)';
-    pulse.style.animation = 'pulse 1.5s infinite';
-    
-    // Add the keyframes for the pulse animation
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @keyframes pulse {
-        0% { transform: scale(0.8); opacity: 0.8; }
-        70% { transform: scale(1.2); opacity: 0; }
-        100% { transform: scale(0.8); opacity: 0; }
-      }
-    `;
-    document.head.appendChild(style);
-    
-    el.appendChild(pulse);
-    
-    return el;
-  };
-  
-  useEffect(() => {
-    if (!mapContainer.current) return;
-    
-    // Initialize map with the token provided
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    
-    // Only create the map if it doesn't exist
-    if (!map.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v11',
-        center: center,
-        zoom: zoom,
-        attributionControl: false
-      });
-      
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      
-      // Add attribution control at the bottom left on larger screens, bottom on mobile
-      const mediaQuery = window.matchMedia('(min-width: 768px)');
-      const attributionPosition = mediaQuery.matches ? 'bottom-left' : 'bottom';
-      map.current.addControl(new mapboxgl.AttributionControl(), attributionPosition);
-      
-      // Add scale control
-      map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
-    }
-    
-    // Resize map when the container changes size
-    const resizeHandler = () => {
-      if (map.current) {
-        map.current.resize();
-      }
-    };
-    
-    window.addEventListener('resize', resizeHandler);
-    
-    return () => {
-      window.removeEventListener('resize', resizeHandler);
-    };
-  }, []); // Empty dependency array - only run once
+  const [mapReady, setMapReady] = useState(false);
+  const mapRef = useRef<L.Map>(null);
 
-  // Add effect to update map center and zoom when props change
-  useEffect(() => {
-    if (map.current && center) {
-      map.current.flyTo({
-        center: center,
-        zoom: zoom,
-        speed: 1.5
-      });
-    }
-  }, [center, zoom]);
-
-  // Separate effect for markers
-  useEffect(() => {
-    if (!map.current) return;
-
-    // Clear all existing markers
-    Object.values(markersRef.current).forEach(marker => marker.remove());
-    Object.values(policeStationsRef.current).forEach(marker => marker.remove());
-    markersRef.current = {};
-    policeStationsRef.current = {};
-
-    // Add occurrences to map
-    if (Array.isArray(occurrences)) {
-      occurrences.forEach(occurrence => {
-        const key = `occurrence-${occurrence.id || occurrence.latitude}-${occurrence.longitude}`;
-        const el = createMarkerElement(occurrence.type);
-        
-        markersRef.current[key] = new mapboxgl.Marker(el)
-          .setLngLat([occurrence.longitude, occurrence.latitude])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
-              .setHTML(
-                `<div class="p-2">
-                  <h3 class="text-base font-semibold mb-1">${occurrence.title}</h3>
-                  <p class="text-sm mb-1">${occurrence.date} - ${occurrence.time}</p>
-                  <p class="text-sm">${occurrence.description}</p>
-                </div>`
-              )
-          )
-          .addTo(map.current!);
-      });
-    }
-
-    // Add police stations to map
-    if (Array.isArray(policeStations)) {
-      policeStations.forEach(station => {
-        const key = `station-${station.id || station.latitude}-${station.longitude}`;
-        const el = createPoliceStationMarker();
-        
-        policeStationsRef.current[key] = new mapboxgl.Marker(el)
-          .setLngLat([station.longitude, station.latitude])
-          .setPopup(
-            new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
-              .setHTML(
-                `<div class="p-2">
-                  <h3 class="text-base font-semibold mb-1">${station.name}</h3>
-                  <p class="text-sm mb-1">Email: ${station.email}</p>
-                  <p class="text-sm">Telefone: ${station.phone}</p>
-                </div>`
-              )
-          )
-          .addTo(map.current!);
-      });
-    }
-
-    return () => {
-      // Cleanup markers on unmount
-      Object.values(markersRef.current).forEach(marker => marker.remove());
-      Object.values(policeStationsRef.current).forEach(marker => marker.remove());
-      markersRef.current = {};
-      policeStationsRef.current = {};
-    };
-  }, [occurrences, policeStations]);
-
-  const getUserCurrentLocation = () => {
+  const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      console.error("Geolocation is not supported by your browser");
-      alert("Seu navegador não suporta geolocalização. Por favor, use um navegador mais moderno.");
+      console.error('Geolocation is not supported by your browser');
       return;
     }
 
@@ -254,126 +120,240 @@ const Map: React.FC<MapProps> = ({
     
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
-        console.log("Location obtained:", { latitude, longitude }); // Debug log
-        
-        // If map is loaded, add or update user location marker
-        if (map.current) {
-          if (userLocationMarkerRef.current) {
-            userLocationMarkerRef.current.setLngLat([longitude, latitude]);
-          } else {
-            const el = createUserLocationMarker();
-            userLocationMarkerRef.current = new mapboxgl.Marker(el)
-              .setLngLat([longitude, latitude])
-              .addTo(map.current);
-          }
-          
-          // Always center map on user location when it's obtained
-          map.current.flyTo({
-            center: [longitude, latitude],
-            zoom: 14,
-            speed: 1.5
-          });
+        console.log('Location obtained:', position.coords);
+        const newLocation: [number, number] = [position.coords.latitude, position.coords.longitude];
+        setCurrentLocation(newLocation);
+        if (mapRef.current) {
+          mapRef.current.setView(newLocation, zoom);
+          // Força uma atualização do mapa
+          mapRef.current.invalidateSize();
         }
-        
-        // If in selection mode, update selected location
-        if (selectionMode && onLocationSelect) {
-          setSelectedLocation([longitude, latitude]);
-          onLocationSelect(latitude, longitude);
-        }
-        
         setLoadingLocation(false);
       },
       (error) => {
-        console.error("Error getting location:", error);
-        setLoadingLocation(false);
-        
-        // More specific error messages based on the error code
-        let errorMessage = "Não foi possível obter sua localização.";
+        console.error('Error getting location:', error);
+        let errorMessage = 'Não foi possível obter sua localização.';
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = "Por favor, permita o acesso à sua localização nas configurações do navegador.";
+            errorMessage = 'Por favor, permita o acesso à sua localização nas configurações do navegador.';
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = "Não foi possível determinar sua localização. Verifique se o GPS está ativado.";
+            errorMessage = 'Não foi possível determinar sua localização. Verifique se o GPS está ativado.';
             break;
           case error.TIMEOUT:
-            errorMessage = "A solicitação de localização expirou. Tente novamente.";
+            errorMessage = 'A solicitação de localização expirou. Tente novamente.';
             break;
           default:
-            errorMessage = "Ocorreu um erro ao obter sua localização. Tente novamente.";
+            errorMessage = 'Ocorreu um erro ao obter sua localização. Tente novamente.';
         }
         alert(errorMessage);
+        setLoadingLocation(false);
       },
-      { 
-        enableHighAccuracy: true, 
-        timeout: 10000, 
-        maximumAge: 0 
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
   };
 
-  // Separate effect for selection mode
+  // Efeito para atualizar o mapa quando a localização mudar
   useEffect(() => {
-    if (!map.current || !selectionMode) return;
+    if (currentLocation && mapRef.current) {
+      mapRef.current.setView(currentLocation, zoom);
+      mapRef.current.invalidateSize();
+    }
+  }, [currentLocation, zoom]);
 
-    const handleClick = (e: mapboxgl.MapMouseEvent) => {
-      const { lng, lat } = e.lngLat;
-      setSelectedLocation([lng, lat]);
-      
-      if (markerRef.current) {
-        markerRef.current.remove();
-      }
-      
-      const el = document.createElement('div');
-      el.className = 'selection-marker';
-      el.style.width = '20px';
-      el.style.height = '20px';
-      el.style.borderRadius = '50%';
-      el.style.backgroundColor = '#1E88E5';
-      el.style.border = '2px solid white';
-      
-      markerRef.current = new mapboxgl.Marker(el)
-        .setLngLat([lng, lat])
-        .addTo(map.current!);
-      
-      if (onLocationSelect) {
-        onLocationSelect(lat, lng);
-      }
-    };
+  useEffect(() => {
+    if (getUserLocation && mapReady) {
+      getCurrentLocation();
+    }
+  }, [getUserLocation, mapReady]);
 
-    map.current.on('click', handleClick);
-    return () => {
-      map.current?.off('click', handleClick);
-    };
-  }, [selectionMode, onLocationSelect]);
+  const handleMapReady = () => {
+    setMapReady(true);
+    if (getUserLocation) {
+      getCurrentLocation();
+    }
+  };
 
   return (
-    <div className={`relative w-full ${height} rounded-lg overflow-hidden shadow-lg`}>
-      <div ref={mapContainer} className="absolute inset-0" />
-      
-      {selectionMode && (
-        <div className="absolute top-2 left-2 bg-white p-2 rounded-md shadow-md z-10 max-w-[200px] sm:max-w-[300px]">
-          <p className="text-sm text-gray-700">Clique no mapa para selecionar a localização</p>
-          {selectedLocation && (
-            <p className="text-xs text-gray-500 mt-1">
-              Lat: {selectedLocation[1].toFixed(4)}, Lng: {selectedLocation[0].toFixed(4)}
-            </p>
-          )}
-        </div>
-      )}
-      
+    <div className={`w-full ${height} rounded-lg overflow-hidden relative`}>
+      <style>
+        {`
+          .leaflet-container {
+            z-index: 0 !important;
+          }
+          .leaflet-pane {
+            z-index: 0 !important;
+          }
+          .leaflet-control-container {
+            z-index: 0 !important;
+          }
+          .leaflet-popup-pane {
+            z-index: 1 !important;
+          }
+          .leaflet-tooltip-pane {
+            z-index: 1 !important;
+          }
+          .leaflet-marker-pane {
+            z-index: 1 !important;
+          }
+        `}
+      </style>
+      <MapContainer
+        center={currentLocation || center}
+        zoom={zoom}
+        className="w-full h-full"
+        ref={mapRef}
+        whenReady={handleMapReady}
+      >
+        <ChangeView center={currentLocation || center} zoom={zoom} />
+        <MapEvents onLocationSelect={onLocationSelect} selectionMode={selectionMode} />
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        
+        {/* Marcador de localização atual */}
+        {currentLocation && (
+          <Marker position={currentLocation}>
+            <Popup>
+              <div className="text-center">
+                <p className="font-medium">Sua localização atual</p>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
+        {/* Marcadores de ocorrências */}
+        {occurrences.map((occurrence) => (
+          <Marker
+            key={occurrence.id}
+            position={[occurrence.latitude, occurrence.longitude]}
+            icon={L.divIcon({
+              className: 'custom-marker',
+              html: `<div class="relative">
+                <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: ${
+                  occurrence.type === 'homicidio' ? '#ef4444' :
+                  occurrence.type === 'furto' ? '#f59e0b' :
+                  occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                }">
+                  ${occurrence.type === 'homicidio' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' :
+                  occurrence.type === 'furto' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>' :
+                  occurrence.type === 'roubo' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' :
+                  '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+                }</div>
+                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: ${
+                  occurrence.type === 'homicidio' ? '#ef4444' :
+                  occurrence.type === 'furto' ? '#f59e0b' :
+                  occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                }"></div>
+                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: ${
+                  occurrence.type === 'homicidio' ? '#ef4444' :
+                  occurrence.type === 'furto' ? '#f59e0b' :
+                  occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                }"></div>
+              </div>`,
+              iconSize: [32, 32],
+              iconAnchor: [16, 16]
+            })}
+          >
+            <Popup>
+              <div className="p-4 min-w-[300px]">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-3 h-3 rounded-full" style={{
+                    backgroundColor: occurrence.type === 'homicidio' ? '#ef4444' :
+                    occurrence.type === 'furto' ? '#f59e0b' :
+                    occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                  }}></div>
+                  <div>
+                    <h3 className="font-semibold text-lg">{occurrence.title || 'Sem título'}</h3>
+                    <span className={`text-sm font-medium ${
+                      occurrence.type === 'homicidio' ? 'text-red-600' :
+                      occurrence.type === 'furto' ? 'text-yellow-600' :
+                      occurrence.type === 'roubo' ? 'text-orange-600' : 'text-blue-600'
+                    }`}>
+                      {occurrence.type.charAt(0).toUpperCase() + occurrence.type.slice(1)}
+                    </span>
+                  </div>
+                </div>
+                
+                {occurrence.description && (
+                  <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                    <p className="text-sm text-gray-600">{occurrence.description}</p>
+                  </div>
+                )}
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Data e Hora:</span>
+                    <span className="font-medium">
+                      {new Date(occurrence.date).toLocaleDateString('pt-BR')} às {occurrence.time}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Status:</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      occurrence.resolved 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {occurrence.resolved ? 'Resolvido' : 'Não resolvido'}
+                    </span>
+                  </div>
+
+                  {occurrence.User && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Registrado por:</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                          <span className="text-xs font-medium text-gray-600">
+                            {occurrence.User.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="font-medium">{occurrence.User.name}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
+        {/* Marcadores de delegacias */}
+        {policeStations.map((station) => (
+          <Marker
+            key={station.id}
+            position={[station.latitude, station.longitude]}
+          >
+            <Popup>
+              <div className="p-2">
+                <h3 className="font-medium mb-1">{station.name}</h3>
+                <p className="text-sm text-gray-600">{station.address}</p>
+                <div className="mt-2 text-xs text-gray-500">
+                  <p>Telefone: {station.phone}</p>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+
+      {/* Botão de localização atual */}
       {getUserLocation && (
-        <button 
-          onClick={getUserCurrentLocation}
-          className="absolute bottom-2 right-2 z-10 bg-white p-2 rounded-full shadow-md hover:bg-gray-100 transition-colors"
+        <button
+          onClick={getCurrentLocation}
+          className="absolute bottom-4 right-4 z-50 bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 transition-colors"
           title="Ir para minha localização"
-          aria-label="Ir para minha localização"
         >
           {loadingLocation ? (
-            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           ) : (
-            <MapPin className="h-5 w-5 text-blue-500" />
+            <MapPin className="w-6 h-6 text-blue-500" />
           )}
         </button>
       )}
