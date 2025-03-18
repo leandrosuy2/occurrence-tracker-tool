@@ -7,6 +7,7 @@ import authService from '@/services/authService';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import PanicButton from './PanicButton';
+import NotificationBell from './NotificationBell';
 
 const Layout: React.FC = () => {
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ const Layout: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4">
+            <NotificationBell />
             <Button
               variant="ghost"
               size="sm"

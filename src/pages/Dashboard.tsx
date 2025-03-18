@@ -1,14 +1,58 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Map from '@/components/Map';
-import { MapPin, FileText } from 'lucide-react';
+import { MapPin, FileText, Users, Shield } from 'lucide-react';
 import occurrenceService from '@/services/occurrenceService';
 import policeStationService from '@/services/policeStationService';
 import { Occurrence, PoliceStation } from '@/types';
 import { toast } from 'sonner';
 import { useInterval } from '@/hooks/use-interval';
 import { useIsMobile } from '@/hooks/use-mobile';
-import api from '@/services/api';
+import api, { basePathUrlApiV1 } from '@/services/api';
+import authService from '@/services/authService';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  LineChart,
+  Line
+} from 'recharts';
+
+// Dados fake apenas para os gráficos
+const FAKE_GRAPH_DATA = [
+  { type: 'Roubo', count: 45, recent: 12 },
+  { type: 'Furto', count: 38, recent: 8 },
+  { type: 'Vandalismo', count: 25, recent: 5 },
+  { type: 'Agressão', count: 20, recent: 7 },
+  { type: 'Assalto', count: 15, recent: 4 },
+  { type: 'Ameaça', count: 18, recent: 6 },
+  { type: 'Outros', count: 28, recent: 9 }
+];
+
+const FAKE_MONTHLY_DATA = [
+  { month: 'Jan', count: 65 },
+  { month: 'Fev', count: 59 },
+  { month: 'Mar', count: 80 },
+  { month: 'Abr', count: 81 },
+  { month: 'Mai', count: 56 },
+  { month: 'Jun', count: 55 },
+  { month: 'Jul', count: 40 },
+  { month: 'Ago', count: 45 },
+  { month: 'Set', count: 60 },
+  { month: 'Out', count: 75 },
+  { month: 'Nov', count: 85 },
+  { month: 'Dez', count: 90 }
+];
+
+const COLORS = ['#FF4B4B', '#FFA726', '#66BB6A', '#42A5F5', '#7E57C2', '#EC407A', '#26A69A'];
 
 const Dashboard: React.FC = () => {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
@@ -21,6 +65,7 @@ const Dashboard: React.FC = () => {
   const [markers, setMarkers] = useState([]);
   
   const isMobile = useIsMobile();
+  const isAdmin = authService.isAdmin();
 
   const fetchData = async () => {
     try {
@@ -134,9 +179,162 @@ const Dashboard: React.FC = () => {
           <CardTitle>Mapa de Delegacias</CardTitle>
         </CardHeader>
         <CardContent className="h-[500px]">
-          <Map markers={markers} />
+          <Map 
+            occurrences={[]} 
+            policeStations={policeStations}
+            height="h-[500px]"
+          />
         </CardContent>
       </Card>
+
+      {/* Gráficos (apenas para administradores) */}
+      {isAdmin && (
+        <>
+          {/* Gráfico de Barras - Tipos de Ocorrências */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tipos de Ocorrências</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={FAKE_GRAPH_DATA}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="type" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval={0}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      orientation="left"
+                      stroke="#8884d8"
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      stroke="#82ca9d"
+                      tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                      formatter={(value: number) => [`${value} ocorrências`, '']}
+                    />
+                    <Bar 
+                      yAxisId="left"
+                      dataKey="count" 
+                      name="Total"
+                      fill="#8884d8"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      yAxisId="right"
+                      dataKey="recent" 
+                      name="Últimos 7 dias"
+                      fill="#82ca9d"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Pizza - Distribuição de Ocorrências */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Distribuição de Ocorrências</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={FAKE_GRAPH_DATA}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={150}
+                      fill="#8884d8"
+                      dataKey="count"
+                      nameKey="type"
+                    >
+                      {FAKE_GRAPH_DATA.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={COLORS[index % COLORS.length]}
+                          stroke="#fff"
+                          strokeWidth={2}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                      formatter={(value: number) => [`${value} ocorrências`, '']}
+                    />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36}
+                      formatter={(value) => value}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Linha - Ocorrências por Mês */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ocorrências por Mês</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={FAKE_MONTHLY_DATA}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="month"
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                      formatter={(value: number) => [`${value} ocorrências`, '']}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke="#8884d8" 
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 };
