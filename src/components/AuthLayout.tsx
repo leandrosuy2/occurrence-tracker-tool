@@ -7,7 +7,7 @@ const AuthLayout: React.FC = () => {
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h1 className="text-center text-3xl font-bold text-ocorrencia-azul-escuro">
-          OcorrênciaApp
+          Vigitantes
         </h1>
         <p className="mt-2 text-center text-sm text-gray-600">
           Sistema de Registro de Ocorrências

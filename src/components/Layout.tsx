@@ -38,7 +38,7 @@ const Layout: React.FC = () => {
               </Sheet>
             )}
             <h1 className="text-xl font-semibold text-ocorrencia-azul-escuro">
-              Sistema de Registro de Ocorrências
+              Vigitantes
             </h1>
           </div>
           

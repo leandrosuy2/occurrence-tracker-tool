@@ -18,7 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       className
     )}>
       <div className="p-6">
-        <h2 className="text-xl font-bold">OcorrênciaApp</h2>
+        <h2 className="text-xl font-bold">Vigilantes</h2>
       </div>
       
       <nav className="flex-1 px-4 py-2 space-y-1">
