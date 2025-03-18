@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -15,6 +14,7 @@ import { User } from '@/types';
 import userService from '@/services/userService';
 import authService from '@/services/authService';
 import { toast } from 'sonner';
+import InputMask from 'react-input-mask';
 
 const Profile: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -81,6 +81,10 @@ const Profile: React.FC = () => {
     setEmailForm((prev) => ({ ...prev, [name]: value }));
   };
   
+  const removeMask = (value: string) => {
+    return value.replace(/[^\d]/g, '');
+  };
+  
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -90,7 +94,7 @@ const Profile: React.FC = () => {
       const formData = new FormData();
       formData.append('name', profileForm.name);
       formData.append('email', profileForm.email);
-      formData.append('cpf', profileForm.cpf);
+      formData.append('cpf', removeMask(profileForm.cpf));
       
       if (profileForm.avatar) {
         formData.append('avatar', profileForm.avatar);
@@ -245,13 +249,21 @@ const Profile: React.FC = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="cpf">CPF</Label>
-                  <Input
-                    id="cpf"
-                    name="cpf"
+                  <InputMask
+                    mask="999.999.999-99"
                     value={profileForm.cpf}
                     onChange={handleProfileChange}
                     required
-                  />
+                  >
+                    {(inputProps: any) => (
+                      <Input
+                        {...inputProps}
+                        id="cpf"
+                        name="cpf"
+                        placeholder="000.000.000-00"
+                      />
+                    )}
+                  </InputMask>
                 </div>
                 
                 <Button type="submit" className="bg-ocorrencia-azul-escuro hover:bg-ocorrencia-azul-medio">
