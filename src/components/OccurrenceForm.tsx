@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +12,7 @@ import policeStationService from "@/services/policeStationService";
 import { Occurrence, PoliceStation } from "@/types";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import authService from "@/services/authService";
 
 interface OccurrenceFormProps {
   occurrence?: Occurrence;
@@ -27,9 +27,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
 }) => {
   const [title, setTitle] = useState(occurrence?.title || '');
   const [description, setDescription] = useState(occurrence?.description || '');
-  const [type, setType] = useState<'homicidio' | 'furto' | 'roubo' | 'outros'>(
-    occurrence?.type || 'outros'
-  );
+  const [type, setType] = useState<string>(occurrence?.type || 'outros');
   const [date, setDate] = useState(occurrence?.date || new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState(occurrence?.time || new Date().toISOString().split('T')[1].substring(0, 5));
   const [latitude, setLatitude] = useState(occurrence?.latitude || 0);
@@ -41,6 +39,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
   const [gettingLocation, setGettingLocation] = useState(false);
   
   const isMobile = useIsMobile();
+  const isAdmin = authService.isAdmin();
 
   useEffect(() => {
     const fetchPoliceStations = async () => {
@@ -103,7 +102,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
       return;
     }
     
-    if (!policeStationId) {
+    if (isAdmin && !policeStationId) {
       toast.error('Por favor, selecione uma delegacia');
       return;
     }
@@ -119,7 +118,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
         longitude,
         date,
         time,
-        policeStation_id: policeStationId,
+        policeStation_id: isAdmin ? policeStationId : undefined,
       };
       
       if (occurrence?.id) {
@@ -164,15 +163,25 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
               <Label htmlFor="type">Tipo de Ocorrência</Label>
               <Select
                 value={type}
-                onValueChange={(value) => setType(value as any)}
+                onValueChange={(value) => setType(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent position={isMobile ? "popper" : "item-aligned"}>
-                  <SelectItem value="homicidio">Homicídio</SelectItem>
-                  <SelectItem value="furto">Furto</SelectItem>
-                  <SelectItem value="roubo">Roubo</SelectItem>
+                  <SelectItem value="agressoes_brigas">Agressões ou brigas</SelectItem>
+                  <SelectItem value="acidentes_transito">Apoio em acidentes de trânsito</SelectItem>
+                  <SelectItem value="depredacao_patrimonio">Depredação do patrimônio público</SelectItem>
+                  <SelectItem value="emergencias_ambientais">Emergências ambientais</SelectItem>
+                  <SelectItem value="invasao_predios">Invasão de prédios ou terrenos públicos</SelectItem>
+                  <SelectItem value="maria_penha">Maria da Penha</SelectItem>
+                  <SelectItem value="perturbacao_sossego">Perturbação do sossego público</SelectItem>
+                  <SelectItem value="posse_armas">Posse de armas brancas ou de fogo</SelectItem>
+                  <SelectItem value="pessoa_suspeita">Pessoa suspeita</SelectItem>
+                  <SelectItem value="roubos_furtos">Roubos e furtos</SelectItem>
+                  <SelectItem value="tentativa_suicidio">Tentativa de suicídio</SelectItem>
+                  <SelectItem value="drogas">Uso e tráfico de drogas</SelectItem>
+                  <SelectItem value="violencia_domestica">Violência doméstica</SelectItem>
                   <SelectItem value="outros">Outros</SelectItem>
                 </SelectContent>
               </Select>
@@ -200,24 +209,26 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="policeStation">Delegacia</Label>
-              <Select
-                value={policeStationId}
-                onValueChange={setPoliceStationId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a delegacia" />
-                </SelectTrigger>
-                <SelectContent position={isMobile ? "popper" : "item-aligned"} className="max-h-[200px]">
-                  {policeStations.map((station) => (
-                    <SelectItem key={station.id} value={station.id}>
-                      {station.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label htmlFor="policeStation">Delegacia</Label>
+                <Select
+                  value={policeStationId}
+                  onValueChange={setPoliceStationId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a delegacia" />
+                  </SelectTrigger>
+                  <SelectContent position={isMobile ? "popper" : "item-aligned"} className="max-h-[200px]">
+                    {policeStations.map((station) => (
+                      <SelectItem key={station.id} value={station.id}>
+                        {station.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2 flex items-end">
               <Button 

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -17,8 +16,12 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       "w-64 bg-ocorrencia-azul-escuro text-white flex flex-col h-full",
       className
     )}>
-      <div className="p-6">
-        <h2 className="text-xl font-bold">Vigilantes</h2>
+      <div className="flex justify-center p-4">
+        <img 
+          src="/logo.png" 
+          alt="Logo Vigilantes" 
+          className="w-auto md:w-48 sm:w-32"
+        />
       </div>
       
       <nav className="flex-1 px-4 py-2 space-y-1">

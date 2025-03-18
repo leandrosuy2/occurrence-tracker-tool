@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import StatCard from '@/components/StatCard';
@@ -114,7 +113,7 @@ const Dashboard: React.FC = () => {
         </p>
       </div>
       
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={`grid gap-4 ${isAdmin ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2'}`}>
         <StatCard
           title="Total de Ocorrências"
           value={getAllCount()}
@@ -127,18 +126,22 @@ const Dashboard: React.FC = () => {
           icon={<FileText className="h-4 w-4" />}
         />
         
-        <StatCard
-          title="Homicídios"
-          value={getMurdersCount()}
-          icon={<AlertTriangle className="h-4 w-4" />}
-          className="border-ocorrencia-vermelho/20"
-        />
-        
-        <StatCard
-          title="Furtos"
-          value={getTheftsCount()}
-          icon={<ShieldAlert className="h-4 w-4" />}
-        />
+        {isAdmin && (
+          <>
+            <StatCard
+              title="Homicídios"
+              value={getMurdersCount()}
+              icon={<AlertTriangle className="h-4 w-4" />}
+              className="border-ocorrencia-vermelho/20"
+            />
+            
+            <StatCard
+              title="Furtos"
+              value={getTheftsCount()}
+              icon={<ShieldAlert className="h-4 w-4" />}
+            />
+          </>
+        )}
       </div>
       
       <div className="grid gap-4 grid-cols-1">
