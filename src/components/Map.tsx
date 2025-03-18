@@ -229,117 +229,121 @@ const Map: React.FC<MapProps> = ({
 
         {/* Marcadores de ocorrências */}
         {occurrences.map((occurrence) => (
-          <Marker
-            key={occurrence.id}
-            position={[occurrence.latitude, occurrence.longitude]}
-            icon={L.divIcon({
-              className: 'custom-marker',
-              html: `<div class="relative">
-                <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: ${
-                  occurrence.type === 'homicidio' ? '#ef4444' :
-                  occurrence.type === 'furto' ? '#f59e0b' :
-                  occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
-                }">
-                  ${occurrence.type === 'homicidio' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' :
-                  occurrence.type === 'furto' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>' :
-                  occurrence.type === 'roubo' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' :
-                  '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
-                }</div>
-                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: ${
-                  occurrence.type === 'homicidio' ? '#ef4444' :
-                  occurrence.type === 'furto' ? '#f59e0b' :
-                  occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
-                }"></div>
-                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: ${
-                  occurrence.type === 'homicidio' ? '#ef4444' :
-                  occurrence.type === 'furto' ? '#f59e0b' :
-                  occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
-                }"></div>
-              </div>`,
-              iconSize: [32, 32],
-              iconAnchor: [16, 16]
-            })}
-          >
-            <Popup>
-              <div className="p-4 min-w-[300px]">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-3 h-3 rounded-full" style={{
-                    backgroundColor: occurrence.type === 'homicidio' ? '#ef4444' :
+          occurrence.latitude && occurrence.longitude ? (
+            <Marker
+              key={occurrence.id}
+              position={[occurrence.latitude, occurrence.longitude]}
+              icon={L.divIcon({
+                className: 'custom-marker',
+                html: `<div class="relative">
+                  <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: ${
+                    occurrence.type === 'homicidio' ? '#ef4444' :
                     occurrence.type === 'furto' ? '#f59e0b' :
                     occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
-                  }}></div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{occurrence.title || 'Sem título'}</h3>
-                    <span className={`text-sm font-medium ${
-                      occurrence.type === 'homicidio' ? 'text-red-600' :
-                      occurrence.type === 'furto' ? 'text-yellow-600' :
-                      occurrence.type === 'roubo' ? 'text-orange-600' : 'text-blue-600'
-                    }`}>
-                      {occurrence.type.charAt(0).toUpperCase() + occurrence.type.slice(1)}
-                    </span>
-                  </div>
-                </div>
-                
-                {occurrence.description && (
-                  <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                    <p className="text-sm text-gray-600">{occurrence.description}</p>
-                  </div>
-                )}
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Data e Hora:</span>
-                    <span className="font-medium">
-                      {new Date(occurrence.date).toLocaleDateString('pt-BR')} às {occurrence.time}
-                    </span>
+                  }">
+                    ${occurrence.type === 'homicidio' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' :
+                    occurrence.type === 'furto' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>' :
+                    occurrence.type === 'roubo' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' :
+                    '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+                  }</div>
+                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: ${
+                    occurrence.type === 'homicidio' ? '#ef4444' :
+                    occurrence.type === 'furto' ? '#f59e0b' :
+                    occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                  }"></div>
+                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: ${
+                    occurrence.type === 'homicidio' ? '#ef4444' :
+                    occurrence.type === 'furto' ? '#f59e0b' :
+                    occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                  }"></div>
+                </div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+              })}
+            >
+              <Popup>
+                <div className="p-4 min-w-[300px]">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-3 h-3 rounded-full" style={{
+                      backgroundColor: occurrence.type === 'homicidio' ? '#ef4444' :
+                      occurrence.type === 'furto' ? '#f59e0b' :
+                      occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                    }}></div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{occurrence.title || 'Sem título'}</h3>
+                      <span className={`text-sm font-medium ${
+                        occurrence.type === 'homicidio' ? 'text-red-600' :
+                        occurrence.type === 'furto' ? 'text-yellow-600' :
+                        occurrence.type === 'roubo' ? 'text-orange-600' : 'text-blue-600'
+                      }`}>
+                        {occurrence.type.charAt(0).toUpperCase() + occurrence.type.slice(1)}
+                      </span>
+                    </div>
                   </div>
                   
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Status:</span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      occurrence.resolved 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {occurrence.resolved ? 'Resolvido' : 'Não resolvido'}
-                    </span>
-                  </div>
-
-                  {occurrence.User && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Registrado por:</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                          <span className="text-xs font-medium text-gray-600">
-                            {occurrence.User.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <span className="font-medium">{occurrence.User.name}</span>
-                      </div>
+                  {occurrence.description && (
+                    <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                      <p className="text-sm text-gray-600">{occurrence.description}</p>
                     </div>
                   )}
+
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Data e Hora:</span>
+                      <span className="font-medium">
+                        {new Date(occurrence.date).toLocaleDateString('pt-BR')} às {occurrence.time}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Status:</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        occurrence.resolved 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {occurrence.resolved ? 'Resolvido' : 'Não resolvido'}
+                      </span>
+                    </div>
+
+                    {occurrence.User && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Registrado por:</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-xs font-medium text-gray-600">
+                              {occurrence.User.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <span className="font-medium">{occurrence.User.name}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
+              </Popup>
+            </Marker>
+          ) : null
         ))}
 
         {/* Marcadores de delegacias */}
         {policeStations.map((station) => (
-          <Marker
-            key={station.id}
-            position={[station.latitude, station.longitude]}
-          >
-            <Popup>
-              <div className="p-2">
-                <h3 className="font-medium mb-1">{station.name}</h3>
-                <p className="text-sm text-gray-600">{station.address}</p>
-                <div className="mt-2 text-xs text-gray-500">
-                  <p>Telefone: {station.phone}</p>
+          station.latitude && station.longitude ? (
+            <Marker
+              key={station.id}
+              position={[station.latitude, station.longitude]}
+            >
+              <Popup>
+                <div className="p-2">
+                  <h3 className="font-medium mb-1">{station.name}</h3>
+                  <p className="text-sm text-gray-600">{station.address}</p>
+                  <div className="mt-2 text-xs text-gray-500">
+                    <p>Telefone: {station.phone}</p>
+                  </div>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
+              </Popup>
+            </Marker>
+          ) : null
         ))}
       </MapContainer>
 

@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 // const API_URL = 'http://147.79.87.185:3000';
 const API_URL = 'http://localhost:3000';
-const basePathUrlApiV1 = "/api/v1";
+export const basePathUrlApiV1 = "/api/v1";
 
 const api = axios.create({
   baseURL: API_URL,
@@ -12,25 +12,18 @@ const api = axios.create({
   },
 });
 
-// Configura o token inicial se existir
-const token = localStorage.getItem('token');
-if (token) {
-  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-}
-
 // Interceptor para adicionar o token em todas as requisições
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('@auth:token'); // Pegando o token do localStorage
+  
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
 
 // Interceptor para tratar erros de autenticação
 api.interceptors.response.use(
@@ -45,5 +38,4 @@ api.interceptors.response.use(
   }
 );
 
-export { basePathUrlApiV1 };
 export default api;

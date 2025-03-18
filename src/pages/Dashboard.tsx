@@ -8,6 +8,7 @@ import { Occurrence, PoliceStation } from '@/types';
 import { toast } from 'sonner';
 import { useInterval } from '@/hooks/use-interval';
 import { useIsMobile } from '@/hooks/use-mobile';
+import api from '@/services/api';
 
 const Dashboard: React.FC = () => {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
@@ -17,6 +18,7 @@ const Dashboard: React.FC = () => {
     total: 0,
     recent: 0
   });
+  const [markers, setMarkers] = useState([]);
   
   const isMobile = useIsMobile();
 
@@ -55,6 +57,19 @@ const Dashboard: React.FC = () => {
   useInterval(() => {
     fetchData();
   }, 30000);
+
+  useEffect(() => {
+    const fetchMarkers = async () => {
+      try {
+        const response = await api.get(`${basePathUrlApiV1}/policeStation`);
+        setMarkers(response.data);
+      } catch (error) {
+        console.error('Error fetching markers:', error);
+      }
+    };
+
+    fetchMarkers();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -113,6 +128,15 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mapa de Delegacias</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[500px]">
+          <Map markers={markers} />
+        </CardContent>
+      </Card>
     </div>
   );
 };

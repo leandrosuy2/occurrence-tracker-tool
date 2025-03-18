@@ -60,8 +60,6 @@ interface PoliceStation {
   name: string;
   email: string;
   phone: string;
-  latitude: number;
-  longitude: number;
 }
 
 const center = {
@@ -90,6 +88,8 @@ const PoliceStations = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [stationToDelete, setStationToDelete] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<PoliceStation | null>(null);
 
   const {
     register,
@@ -99,6 +99,10 @@ const PoliceStations = () => {
     formState: { errors },
   } = useForm<PoliceStationFormData>({
     resolver: zodResolver(policeStationSchema),
+    defaultValues: {
+      latitude: center.lat,
+      longitude: center.lng
+    }
   });
 
   const fetchStations = async () => {
@@ -120,13 +124,22 @@ const PoliceStations = () => {
 
   const onSubmit = async (data: PoliceStationFormData) => {
     try {
+      const payload = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      };
+
       if (editingStation) {
-        await api.put(`${basePathUrlApiV1}/policeStation/${editingStation.id}`, data);
+        await api.put(`${basePathUrlApiV1}/policeStation/${editingStation.id}`, payload);
         toast.success('Delegacia atualizada com sucesso!');
       } else {
-        await api.post(`${basePathUrlApiV1}/policeStation`, data);
+        await api.post(`${basePathUrlApiV1}/policeStation/save`, payload);
         toast.success('Delegacia criada com sucesso!');
       }
+      
       setDialogOpen(false);
       reset();
       setEditingStation(null);
@@ -179,6 +192,11 @@ const PoliceStations = () => {
     setIsMapOpen(true);
   };
 
+  const handleShowAddress = (station: PoliceStation) => {
+    setSelectedAddress(station);
+    setIsAddressModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -198,49 +216,51 @@ const PoliceStations = () => {
               Nova Delegacia
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-[90vw] md:max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingStation ? 'Editar Delegacia' : 'Nova Delegacia'}
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  {...register('name')}
-                />
-                {errors.name && (
-                  <p className="text-sm text-red-500">{errors.name.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  {...register('email')}
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="phone">Telefone</Label>
-                <Input
-                  id="phone"
-                  {...register('phone')}
-                />
-                {errors.phone && (
-                  <p className="text-sm text-red-500">{errors.phone.message}</p>
-                )}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Nome</Label>
+                  <Input
+                    id="name"
+                    {...register('name')}
+                  />
+                  {errors.name && (
+                    <p className="text-sm text-red-500">{errors.name.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    {...register('email')}
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-red-500">{errors.email.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    {...register('phone')}
+                  />
+                  {errors.phone && (
+                    <p className="text-sm text-red-500">{errors.phone.message}</p>
+                  )}
+                </div>
               </div>
               <div>
                 <Label>Localização</Label>
-                <div className="h-[400px] w-full">
+                <div className="h-[400px] w-full rounded-md border">
                   <MapContainer
-                    center={[center.lat, center.lng]}
+                    center={editingStation ? [editingStation.latitude, editingStation.longitude] : [center.lat, center.lng]}
                     zoom={13}
                     style={{ height: '100%', width: '100%' }}
                   >
@@ -250,22 +270,24 @@ const PoliceStations = () => {
                     />
                     <MapClickHandler onMapClick={handleMapClick} />
                     {markers.map((station) => (
-                      <Marker
-                        key={station.id}
-                        position={[station.latitude, station.longitude]}
-                        icon={icon}
-                        eventHandlers={{
-                          click: () => handleMarkerClick(station)
-                        }}
-                      >
-                        <Popup>
-                          <div>
-                            <h3 className="font-bold">{station.name}</h3>
-                            <p>{station.email}</p>
-                            <p>{station.phone}</p>
-                          </div>
-                        </Popup>
-                      </Marker>
+                      station.latitude && station.longitude ? (
+                        <Marker
+                          key={station.id}
+                          position={[station.latitude, station.longitude]}
+                          icon={icon}
+                          eventHandlers={{
+                            click: () => handleMarkerClick(station)
+                          }}
+                        >
+                          <Popup>
+                            <div>
+                              <h3 className="font-bold">{station.name}</h3>
+                              <p>{station.email}</p>
+                              <p>{station.phone}</p>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ) : null
                     ))}
                   </MapContainer>
                 </div>
@@ -290,9 +312,14 @@ const PoliceStations = () => {
                   </div>
                 </div>
               </div>
-              <Button type="submit" className="w-full">
-                {editingStation ? 'Atualizar' : 'Criar'}
-              </Button>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {editingStation ? 'Salvar alterações' : 'Criar delegacia'}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
@@ -319,7 +346,7 @@ const PoliceStations = () => {
                     <TableHead>Nome</TableHead>
                     <TableHead>E-mail</TableHead>
                     <TableHead>Telefone</TableHead>
-                    <TableHead>Localização</TableHead>
+                    <TableHead>Endereço</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -333,10 +360,10 @@ const PoliceStations = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleMarkerClick(station)}
+                          onClick={() => handleShowAddress(station)}
                         >
                           <MapPin className="h-4 w-4 mr-2" />
-                          Ver no mapa
+                          Ver endereço
                         </Button>
                       </TableCell>
                       <TableCell>
@@ -414,43 +441,48 @@ const PoliceStations = () => {
       ) : (
         <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-            <h2 className="text-xl font-semibold mb-4">
-              {selectedStation?.name}
-            </h2>
-            <div className="mb-4">
-              <p className="text-muted-foreground">
-                {selectedStation?.email}
-              </p>
-              <p className="text-muted-foreground">
-                {selectedStation?.phone}
-              </p>
-            </div>
-            {selectedStation && (
-              <div className="h-[500px]">
-                <MapContainer
-                  center={[selectedStation.latitude, selectedStation.longitude]}
-                  zoom={14}
-                  style={{ height: '100%', width: '100%' }}
-                >
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  />
-                  <Marker
-                    position={[selectedStation.latitude, selectedStation.longitude]}
-                    icon={icon}
-                  >
-                    <Popup>
-                      <div>
-                        <h3 className="font-bold">{selectedStation.name}</h3>
-                        <p>{selectedStation.email}</p>
-                        <p>{selectedStation.phone}</p>
-                      </div>
-                    </Popup>
-                  </Marker>
-                </MapContainer>
+            <DialogHeader>
+              <DialogTitle>
+                Localização da Delegacia
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {selectedStation?.name}
+                </h2>
+                <div className="text-muted-foreground">
+                  <p>{selectedStation?.email}</p>
+                  <p>{selectedStation?.phone}</p>
+                </div>
               </div>
-            )}
+              {selectedStation && selectedStation.latitude && selectedStation.longitude && (
+                <div className="h-[500px] w-full">
+                  <MapContainer
+                    center={[selectedStation.latitude, selectedStation.longitude]}
+                    zoom={14}
+                    style={{ height: '100%', width: '100%' }}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                    <Marker
+                      position={[selectedStation.latitude, selectedStation.longitude]}
+                      icon={icon}
+                    >
+                      <Popup>
+                        <div>
+                          <h3 className="font-bold">{selectedStation.name}</h3>
+                          <p>{selectedStation.email}</p>
+                          <p>{selectedStation.phone}</p>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  </MapContainer>
+                </div>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       )}
@@ -475,6 +507,62 @@ const PoliceStations = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Adicione o modal de endereço */}
+      <Dialog open={isAddressModalOpen} onOpenChange={setIsAddressModalOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Localização da Delegacia</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold">{selectedAddress?.name}</h3>
+              <div className="mt-2 space-y-1">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">E-mail:</span> {selectedAddress?.email}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Telefone:</span> {selectedAddress?.phone}
+                </p>
+              </div>
+            </div>
+
+            {/* Mapa */}
+            {selectedAddress && (
+              <div className="h-[400px] w-full rounded-md border">
+                <MapContainer
+                  center={[selectedAddress.latitude, selectedAddress.longitude]}
+                  zoom={15}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  />
+                  <Marker
+                    position={[selectedAddress.latitude, selectedAddress.longitude]}
+                    icon={icon}
+                  >
+                    <Popup>
+                      <div>
+                        <h3 className="font-bold">{selectedAddress.name}</h3>
+                        <p>{selectedAddress.email}</p>
+                        <p>{selectedAddress.phone}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                </MapContainer>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setIsAddressModalOpen(false)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
