@@ -191,44 +191,48 @@ const Map: React.FC<MapProps> = ({
     policeStationsRef.current = {};
 
     // Add occurrences to map
-    occurrences.forEach(occurrence => {
-      const key = `occurrence-${occurrence.id || occurrence.latitude}-${occurrence.longitude}`;
-      const el = createMarkerElement(occurrence.type);
-      
-      markersRef.current[key] = new mapboxgl.Marker(el)
-        .setLngLat([occurrence.longitude, occurrence.latitude])
-        .setPopup(
-          new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
-            .setHTML(
-              `<div class="p-2">
-                <h3 class="text-base font-semibold mb-1">${occurrence.title}</h3>
-                <p class="text-sm mb-1">${occurrence.date} - ${occurrence.time}</p>
-                <p class="text-sm">${occurrence.description}</p>
-              </div>`
-            )
-        )
-        .addTo(map.current!);
-    });
+    if (Array.isArray(occurrences)) {
+      occurrences.forEach(occurrence => {
+        const key = `occurrence-${occurrence.id || occurrence.latitude}-${occurrence.longitude}`;
+        const el = createMarkerElement(occurrence.type);
+        
+        markersRef.current[key] = new mapboxgl.Marker(el)
+          .setLngLat([occurrence.longitude, occurrence.latitude])
+          .setPopup(
+            new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
+              .setHTML(
+                `<div class="p-2">
+                  <h3 class="text-base font-semibold mb-1">${occurrence.title}</h3>
+                  <p class="text-sm mb-1">${occurrence.date} - ${occurrence.time}</p>
+                  <p class="text-sm">${occurrence.description}</p>
+                </div>`
+              )
+          )
+          .addTo(map.current!);
+      });
+    }
 
     // Add police stations to map
-    policeStations.forEach(station => {
-      const key = `station-${station.id || station.latitude}-${station.longitude}`;
-      const el = createPoliceStationMarker();
-      
-      policeStationsRef.current[key] = new mapboxgl.Marker(el)
-        .setLngLat([station.longitude, station.latitude])
-        .setPopup(
-          new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
-            .setHTML(
-              `<div class="p-2">
-                <h3 class="text-base font-semibold mb-1">${station.name}</h3>
-                <p class="text-sm mb-1">Email: ${station.email}</p>
-                <p class="text-sm">Telefone: ${station.phone}</p>
-              </div>`
-            )
-        )
-        .addTo(map.current!);
-    });
+    if (Array.isArray(policeStations)) {
+      policeStations.forEach(station => {
+        const key = `station-${station.id || station.latitude}-${station.longitude}`;
+        const el = createPoliceStationMarker();
+        
+        policeStationsRef.current[key] = new mapboxgl.Marker(el)
+          .setLngLat([station.longitude, station.latitude])
+          .setPopup(
+            new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
+              .setHTML(
+                `<div class="p-2">
+                  <h3 class="text-base font-semibold mb-1">${station.name}</h3>
+                  <p class="text-sm mb-1">Email: ${station.email}</p>
+                  <p class="text-sm">Telefone: ${station.phone}</p>
+                </div>`
+              )
+          )
+          .addTo(map.current!);
+      });
+    }
 
     return () => {
       // Cleanup markers on unmount

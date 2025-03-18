@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,13 +62,14 @@ const Occurrences: React.FC = () => {
     try {
       setLoading(true);
       const occurrencesData = await occurrenceService.getUserOccurrences();
-      setOccurrences(occurrencesData);
+      setOccurrences(Array.isArray(occurrencesData) ? occurrencesData : []);
       
       const stationsData = await policeStationService.getAllPoliceStations();
       setPoliceStations(stationsData);
     } catch (error) {
       console.error('Error fetching occurrences:', error);
       toast.error('Erro ao carregar ocorrências');
+      setOccurrences([]);
     } finally {
       setLoading(false);
     }

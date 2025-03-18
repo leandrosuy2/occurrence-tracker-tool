@@ -1,4 +1,3 @@
-
 import api, { basePathUrlApiV1 } from './api';
 import { Occurrence, OccurrenceStats } from '../types';
 import { toast } from "sonner";
@@ -20,8 +19,8 @@ const getUserOccurrences = async () => {
     const response = await api.get(`${basePathUrlApiV1}/ocurrences/self`);
     return response.data;
   } catch (error) {
-    console.error('Get user occurrences error:', error);
-    toast.error("Erro ao buscar ocorrências.");
+    console.error('Error fetching user occurrences:', error);
+    toast.error('Erro ao buscar suas ocorrências');
     throw error;
   }
 };
@@ -83,13 +82,41 @@ const getOccurrenceStats = async (): Promise<OccurrenceStats> => {
   }
 };
 
+const createQuickOccurrence = async (latitude: number, longitude: number) => {
+  try {
+    const response = await api.post(`${basePathUrlApiV1}/ocurrences/quick`, {
+      latitude,
+      longitude
+    });
+    toast.success("Ocorrência rápida registrada com sucesso!");
+    return response.data;
+  } catch (error) {
+    console.error('Create quick occurrence error:', error);
+    toast.error("Erro ao registrar ocorrência rápida.");
+    throw error;
+  }
+};
+
+const getAllOccurrences = async () => {
+  try {
+    const response = await api.get(`${basePathUrlApiV1}/ocurrences`);
+    return response.data;
+  } catch (error) {
+    console.error('Get all occurrences error:', error);
+    toast.error("Erro ao buscar todas as ocorrências.");
+    throw error;
+  }
+};
+
 const occurrenceService = {
   createOccurrence,
   getUserOccurrences,
   getOccurrenceById,
   updateOccurrence,
   deleteOccurrence,
-  getOccurrenceStats
+  getOccurrenceStats,
+  createQuickOccurrence,
+  getAllOccurrences
 };
 
 export default occurrenceService;

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -7,6 +6,7 @@ import { User, LogOut, Menu } from 'lucide-react';
 import authService from '@/services/authService';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import PanicButton from './PanicButton';
 
 const Layout: React.FC = () => {
   const navigate = useNavigate();
@@ -37,9 +37,6 @@ const Layout: React.FC = () => {
                 </SheetContent>
               </Sheet>
             )}
-            <h1 className="text-xl font-semibold text-ocorrencia-azul-escuro">
-              Vigitantes
-            </h1>
           </div>
           
           <div className="flex items-center gap-4">
@@ -68,6 +65,9 @@ const Layout: React.FC = () => {
         <main className="flex-1 overflow-auto p-6">
           <Outlet />
         </main>
+
+        {/* Panic Button - Available throughout the app */}
+        <PanicButton />
       </div>
     </div>
   );
