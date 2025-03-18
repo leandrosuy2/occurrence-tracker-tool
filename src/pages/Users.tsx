@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import {
   Table,
@@ -44,6 +43,7 @@ const Users: React.FC = () => {
   
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const data = await userService.getAllUsers();
       setUsers(data);
     } catch (error) {
@@ -91,6 +91,7 @@ const Users: React.FC = () => {
       fetchUsers();
     } catch (error) {
       console.error('Error saving user:', error);
+      toast.error('Erro ao salvar usuário');
     }
   };
   
@@ -102,6 +103,7 @@ const Users: React.FC = () => {
     try {
       await userService.deleteUser(id);
       fetchUsers();
+      toast.success('Usuário excluído com sucesso');
     } catch (error) {
       console.error('Error deleting user:', error);
       toast.error('Erro ao excluir usuário');
@@ -166,78 +168,67 @@ const Users: React.FC = () => {
               </DialogTitle>
             </DialogHeader>
             
-            <form onSubmit={handleSubmit} className="space-y-4 py-4">
-              <div className="grid grid-cols-1 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input
+                  id="cpf"
+                  value={formData.cpf}
+                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                  required
+                />
+              </div>
+              
+              {!editingId && (
                 <div className="space-y-2">
-                  <Label htmlFor="avatar">Foto de Perfil</Label>
+                  <Label htmlFor="password">Senha</Label>
                   <Input
-                    id="avatar"
-                    name="avatar"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome completo</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
                   />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF</Label>
-                  <Input
-                    id="cpf"
-                    name="cpf"
-                    value={formData.cpf}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                
-                {!editingId && (
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Senha</Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required={!editingId}
-                    />
-                  </div>
-                )}
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="avatar">Avatar</Label>
+                <Input
+                  id="avatar"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFormData({ ...formData, avatar: e.target.files?.[0] || null })}
+                />
               </div>
               
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={resetForm}
-                >
+                <Button type="button" variant="outline" onClick={resetForm}>
                   Cancelar
                 </Button>
-                <Button type="submit" className="bg-ocorrencia-azul-escuro hover:bg-ocorrencia-azul-medio">
-                  {editingId ? 'Atualizar' : 'Criar'}
+                <Button type="submit">
+                  {editingId ? 'Salvar' : 'Criar'}
                 </Button>
               </DialogFooter>
             </form>

@@ -1,7 +1,8 @@
+import api from './api';
+import { User } from '@/types';
+import { toast } from "sonner";
 
-import api, { basePathUrlApiV1 } from './api';
-import { User } from '../types';
-import { toast } from 'sonner';
+const basePathUrlApiV1 = "/api/v1";
 
 const getAllUsers = async (): Promise<User[]> => {
   try {
@@ -20,7 +21,7 @@ const getUserById = async (id: string): Promise<User> => {
     return response.data;
   } catch (error) {
     console.error('Get user by id error:', error);
-    toast.error("Erro ao buscar detalhes do usuário.");
+    toast.error("Erro ao buscar usuário.");
     throw error;
   }
 };
@@ -31,14 +32,18 @@ const getUserProfile = async (): Promise<User> => {
     return response.data;
   } catch (error) {
     console.error('Get user profile error:', error);
-    toast.error("Erro ao buscar perfil de usuário.");
+    toast.error("Erro ao buscar perfil do usuário.");
     throw error;
   }
 };
 
-const updateUser = async (id: string, userData: Partial<User>): Promise<User> => {
+const updateUser = async (id: string, data: FormData): Promise<User> => {
   try {
-    const response = await api.put(`${basePathUrlApiV1}/users/${id}`, userData);
+    const response = await api.put(`${basePathUrlApiV1}/users/${id}`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     toast.success("Usuário atualizado com sucesso!");
     return response.data;
   } catch (error) {
@@ -48,9 +53,13 @@ const updateUser = async (id: string, userData: Partial<User>): Promise<User> =>
   }
 };
 
-const updateSelf = async (userData: Partial<User>): Promise<User> => {
+const updateSelf = async (data: FormData): Promise<User> => {
   try {
-    const response = await api.put(`${basePathUrlApiV1}/users/profile`, userData);
+    const response = await api.put(`${basePathUrlApiV1}/users/self`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     toast.success("Perfil atualizado com sucesso!");
     return response.data;
   } catch (error) {
@@ -72,9 +81,13 @@ const updateUserRole = async (id: string, role: string): Promise<User> => {
   }
 };
 
-const createUser = async (userData: FormData): Promise<User> => {
+const createUser = async (data: FormData): Promise<User> => {
   try {
-    const response = await api.post(`${basePathUrlApiV1}/users`, userData);
+    const response = await api.post(`${basePathUrlApiV1}/users/save`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     toast.success("Usuário criado com sucesso!");
     return response.data;
   } catch (error) {
@@ -97,11 +110,11 @@ const deleteUser = async (id: string): Promise<void> => {
 
 const deleteSelf = async (): Promise<void> => {
   try {
-    await api.delete(`${basePathUrlApiV1}/users/profile`);
-    toast.success("Sua conta foi excluída com sucesso!");
+    await api.delete(`${basePathUrlApiV1}/users/self`);
+    toast.success("Conta excluída com sucesso!");
   } catch (error) {
     console.error('Delete self error:', error);
-    toast.error("Erro ao excluir sua conta.");
+    toast.error("Erro ao excluir conta.");
     throw error;
   }
 };

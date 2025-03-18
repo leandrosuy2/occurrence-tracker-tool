@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -54,12 +53,12 @@ const App = () => (
                 <PoliceStations />
               </ProtectedRoute>
             } />
+            
             <Route path="permissoes" element={
               <ProtectedRoute requireAdmin={true}>
                 <Permissions />
               </ProtectedRoute>
-            } /> 
-           
+            } />
           </Route>
           
           {/* Catch-all route */}

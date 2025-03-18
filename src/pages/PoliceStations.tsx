@@ -1,136 +1,301 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
+import { Plus, Pencil, Trash2, MapPin } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { PoliceStation } from '@/types';
-import policeStationService from '@/services/policeStationService';
-import Map from '@/components/Map';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { toast } from 'sonner';
+import api, { basePathUrlApiV1 } from '@/services/api';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-const PoliceStations: React.FC = () => {
-  const [policeStations, setPoliceStations] = useState<PoliceStation[]>([]);
+// Corrigir o ícone do marcador do Leaflet
+const icon = L.icon({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const policeStationSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório'),
+  email: z.string().email('E-mail inválido'),
+  phone: z.string().min(1, 'Telefone é obrigatório'),
+  latitude: z.number(),
+  longitude: z.number(),
+});
+
+type PoliceStationFormData = z.infer<typeof policeStationSchema>;
+
+interface PoliceStation {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  latitude: number;
+  longitude: number;
+}
+
+const center = {
+  lat: -23.550520,
+  lng: -46.633308
+};
+
+// Componente para capturar cliques no mapa
+const MapClickHandler = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
+  useMapEvents({
+    click: (e) => {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+};
+
+const PoliceStations = () => {
+  const [stations, setStations] = useState<PoliceStation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editStationId, setEditStationId] = useState<string | null>(null);
-  const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingStation, setEditingStation] = useState<PoliceStation | null>(null);
+  const [selectedStation, setSelectedStation] = useState<PoliceStation | null>(null);
+  const [markers, setMarkers] = useState<PoliceStation[]>([]);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [stationToDelete, setStationToDelete] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
-  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<Omit<PoliceStation, 'id'>>();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm<PoliceStationFormData>({
+    resolver: zodResolver(policeStationSchema),
+  });
 
-  // Fetch all police stations
-  const fetchPoliceStations = useCallback(async () => {
+  const fetchStations = async () => {
     try {
-      setLoading(true);
-      const data = await policeStationService.getAllPoliceStations();
-      setPoliceStations(data);
+      const response = await api.get(`${basePathUrlApiV1}/policeStation`);
+      setStations(response.data);
+      setMarkers(response.data);
     } catch (error) {
-      console.error('Error fetching police stations:', error);
+      console.error('Error fetching stations:', error);
+      toast.error('Erro ao carregar delegacias');
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    fetchPoliceStations();
-  }, [fetchPoliceStations]);
+    fetchStations();
+  }, []);
 
-  // Handle create/edit form submission
-  const onSubmit = async (data: Omit<PoliceStation, 'id'>) => {
+  const onSubmit = async (data: PoliceStationFormData) => {
     try {
-      if (editStationId) {
-        await policeStationService.updatePoliceStation(editStationId, data);
+      if (editingStation) {
+        await api.put(`${basePathUrlApiV1}/policeStation/${editingStation.id}`, data);
+        toast.success('Delegacia atualizada com sucesso!');
       } else {
-        await policeStationService.createPoliceStation(data);
+        await api.post(`${basePathUrlApiV1}/policeStation`, data);
+        toast.success('Delegacia criada com sucesso!');
       }
-      
-      fetchPoliceStations();
-      setCreateDialogOpen(false);
-      setEditStationId(null);
+      setDialogOpen(false);
       reset();
+      setEditingStation(null);
+      fetchStations();
     } catch (error) {
-      console.error('Error saving police station:', error);
+      console.error('Error saving station:', error);
+      toast.error('Erro ao salvar delegacia');
     }
   };
 
-  // Handle edit police station
   const handleEdit = (station: PoliceStation) => {
-    setEditStationId(station.id);
+    setEditingStation(station);
     setValue('name', station.name);
     setValue('email', station.email);
     setValue('phone', station.phone);
     setValue('latitude', station.latitude);
     setValue('longitude', station.longitude);
-    setCurrentLocation([station.longitude, station.latitude]);
-    setCreateDialogOpen(true);
+    setDialogOpen(true);
   };
 
-  // Handle delete police station
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
+    setStationToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!stationToDelete) return;
+    
     try {
-      await policeStationService.deletePoliceStation(id);
-      fetchPoliceStations();
+      await api.delete(`${basePathUrlApiV1}/policeStation/${stationToDelete}`);
+      toast.success('Delegacia excluída com sucesso!');
+      fetchStations();
     } catch (error) {
-      console.error('Error deleting police station:', error);
+      console.error('Error deleting station:', error);
+      toast.error('Erro ao excluir delegacia');
     }
+    
+    setIsDeleteDialogOpen(false);
+    setStationToDelete(null);
   };
 
-  // Handle location selection from map
-  const handleLocationSelect = (lat: number, lng: number) => {
+  const handleMapClick = (lat: number, lng: number) => {
     setValue('latitude', lat);
     setValue('longitude', lng);
+    toast.success('Localização selecionada no mapa!');
   };
 
-  // Reset form when dialog opens
-  const handleDialogOpen = () => {
-    setEditStationId(null);
-    reset({
-      name: '',
-      email: '',
-      phone: '',
-      latitude: 0,
-      longitude: 0
-    });
-    setCurrentLocation(null);
-    setCreateDialogOpen(true);
+  const handleMarkerClick = (station: PoliceStation) => {
+    setSelectedStation(station);
+    setIsMapOpen(true);
   };
-
-  // Filter police stations by search term
-  const filteredStations = policeStations.filter(station =>
-    station.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    station.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    station.phone.includes(searchTerm)
-  );
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Delegacias</h1>
           <p className="text-muted-foreground">
-            Gerenciar delegacias cadastradas no sistema
+            Gerencie as delegacias cadastradas no sistema
           </p>
         </div>
-        <Button onClick={handleDialogOpen} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Adicionar Delegacia
-        </Button>
-      </div>
-
-      <div className="flex items-center mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Pesquisar delegacias..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => {
+              reset();
+              setEditingStation(null);
+            }}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Delegacia
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingStation ? 'Editar Delegacia' : 'Nova Delegacia'}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  {...register('name')}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-500">{errors.name.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  {...register('email')}
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-500">{errors.email.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="phone">Telefone</Label>
+                <Input
+                  id="phone"
+                  {...register('phone')}
+                />
+                {errors.phone && (
+                  <p className="text-sm text-red-500">{errors.phone.message}</p>
+                )}
+              </div>
+              <div>
+                <Label>Localização</Label>
+                <div className="h-[400px] w-full">
+                  <MapContainer
+                    center={[center.lat, center.lng]}
+                    zoom={13}
+                    style={{ height: '100%', width: '100%' }}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                    <MapClickHandler onMapClick={handleMapClick} />
+                    {markers.map((station) => (
+                      <Marker
+                        key={station.id}
+                        position={[station.latitude, station.longitude]}
+                        icon={icon}
+                        eventHandlers={{
+                          click: () => handleMarkerClick(station)
+                        }}
+                      >
+                        <Popup>
+                          <div>
+                            <h3 className="font-bold">{station.name}</h3>
+                            <p>{station.email}</p>
+                            <p>{station.phone}</p>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    ))}
+                  </MapContainer>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="latitude">Latitude</Label>
+                    <Input
+                      id="latitude"
+                      type="number"
+                      step="any"
+                      {...register('latitude', { valueAsNumber: true })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="longitude">Longitude</Label>
+                    <Input
+                      id="longitude"
+                      type="number"
+                      step="any"
+                      {...register('longitude', { valueAsNumber: true })}
+                    />
+                  </div>
+                </div>
+              </div>
+              <Button type="submit" className="w-full">
+                {editingStation ? 'Atualizar' : 'Criar'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -139,71 +304,57 @@ const PoliceStations: React.FC = () => {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-4">Carregando delegacias...</div>
-          ) : filteredStations.length === 0 ? (
-            <div className="text-center py-4">Nenhuma delegacia encontrada</div>
+            <div className="py-10 text-center">
+              <p>Carregando delegacias...</p>
+            </div>
+          ) : stations.length === 0 ? (
+            <div className="py-10 text-center">
+              <p>Nenhuma delegacia cadastrada</p>
+            </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead>E-mail</TableHead>
                     <TableHead>Telefone</TableHead>
                     <TableHead>Localização</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredStations.map((station) => (
+                  {stations.map((station) => (
                     <TableRow key={station.id}>
-                      <TableCell className="font-medium">{station.name}</TableCell>
+                      <TableCell>{station.name}</TableCell>
                       <TableCell>{station.email}</TableCell>
                       <TableCell>{station.phone}</TableCell>
                       <TableCell>
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          <span>
-                            {station.latitude.toFixed(4)}, {station.longitude.toFixed(4)}
-                          </span>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleMarkerClick(station)}
+                        >
+                          <MapPin className="h-4 w-4 mr-2" />
+                          Ver no mapa
+                        </Button>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                      <TableCell>
+                        <div className="flex space-x-2">
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="sm"
                             onClick={() => handleEdit(station)}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Confirmar exclusão
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir a delegacia "{station.name}"? 
-                                  Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  onClick={() => handleDelete(station.id)}
-                                >
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(station.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -215,91 +366,115 @@ const PoliceStations: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editStationId ? 'Editar Delegacia' : 'Adicionar Nova Delegacia'}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome da Delegacia</Label>
-                  <Input
-                    id="name"
-                    {...register('name', { required: 'Nome é obrigatório' })}
-                  />
-                  {errors.name && (
-                    <p className="text-sm text-destructive">{errors.name.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    {...register('email', { required: 'Email é obrigatório' })}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    {...register('phone', { required: 'Telefone é obrigatório' })}
-                  />
-                  {errors.phone && (
-                    <p className="text-sm text-destructive">{errors.phone.message}</p>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="latitude">Latitude</Label>
-                    <Input
-                      id="latitude"
-                      type="number"
-                      step="any"
-                      {...register('latitude', { required: 'Latitude é obrigatória' })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="longitude">Longitude</Label>
-                    <Input
-                      id="longitude"
-                      type="number"
-                      step="any"
-                      {...register('longitude', { required: 'Longitude é obrigatória' })}
-                    />
-                  </div>
-                </div>
+      {/* Map Dialog/Sheet (responsive) */}
+      {isMobile ? (
+        <Sheet open={isMapOpen} onOpenChange={setIsMapOpen}>
+          <SheetContent side="bottom" className="h-[80vh] pt-6 max-w-none">
+            <div className="h-full flex flex-col">
+              <h2 className="text-xl font-semibold mb-2">
+                {selectedStation?.name}
+              </h2>
+              <div className="mb-2">
+                <p className="text-muted-foreground text-sm">
+                  {selectedStation?.email}
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  {selectedStation?.phone}
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label>Selecione a localização no mapa</Label>
-                <div className="w-full h-64 border rounded-md overflow-hidden">
-                  <Map
-                    center={currentLocation || [-47.9292, -15.7801]}
-                    zoom={10}
-                    height="h-64"
-                    selectionMode={true}
-                    onLocationSelect={handleLocationSelect}
-                    occurrences={[]}
-                    policeStations={[]}
-                  />
+              {selectedStation && (
+                <div className="flex-1 -mx-6 -mb-8">
+                  <MapContainer
+                    center={[selectedStation.latitude, selectedStation.longitude]}
+                    zoom={14}
+                    style={{ height: '100%', width: '100%' }}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                    <Marker
+                      position={[selectedStation.latitude, selectedStation.longitude]}
+                      icon={icon}
+                    >
+                      <Popup>
+                        <div>
+                          <h3 className="font-bold">{selectedStation.name}</h3>
+                          <p>{selectedStation.email}</p>
+                          <p>{selectedStation.phone}</p>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  </MapContainer>
                 </div>
-              </div>
+              )}
             </div>
-            <DialogFooter>
-              <Button type="submit">
-                {editStationId ? 'Salvar Alterações' : 'Adicionar Delegacia'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+            <h2 className="text-xl font-semibold mb-4">
+              {selectedStation?.name}
+            </h2>
+            <div className="mb-4">
+              <p className="text-muted-foreground">
+                {selectedStation?.email}
+              </p>
+              <p className="text-muted-foreground">
+                {selectedStation?.phone}
+              </p>
+            </div>
+            {selectedStation && (
+              <div className="h-[500px]">
+                <MapContainer
+                  center={[selectedStation.latitude, selectedStation.longitude]}
+                  zoom={14}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  />
+                  <Marker
+                    position={[selectedStation.latitude, selectedStation.longitude]}
+                    icon={icon}
+                  >
+                    <Popup>
+                      <div>
+                        <h3 className="font-bold">{selectedStation.name}</h3>
+                        <p>{selectedStation.email}</p>
+                        <p>{selectedStation.phone}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                </MapContainer>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="max-w-[90vw] md:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Delegacia</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem certeza que deseja excluir esta delegacia? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col space-y-2 sm:space-y-0 sm:flex-row">
+            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

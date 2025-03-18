@@ -1,5 +1,5 @@
-
 import axios from 'axios';
+import { toast } from "sonner";
 
 // const API_URL = 'http://147.79.87.185:3000';
 const API_URL = 'http://localhost:3000';
@@ -11,6 +11,12 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Configura o token inicial se existir
+const token = localStorage.getItem('token');
+if (token) {
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
 
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use(
@@ -30,7 +36,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Home, FileText, MapPin, Shield, Users, Settings } from 'lucide-react';
+import { Home, FileText, MapPin, Users, Shield } from 'lucide-react';
 import authService from '@/services/authService';
 
 interface SidebarProps {
@@ -9,7 +9,22 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ className }) => {
-  const isAdmin = authService.isAdmin();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = () => {
+      const user = authService.getCurrentUser();
+      console.log('Sidebar - User data:', user);
+      const adminStatus = authService.isAdmin();
+      console.log('Sidebar - Admin status:', adminStatus);
+      setIsAdmin(adminStatus);
+    };
+
+    checkAdmin();
+    // Verificar a cada 1 segundo para garantir que o estado está atualizado
+    const interval = setInterval(checkAdmin, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className={cn(
@@ -103,21 +118,6 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
             </NavLink>
           </>
         )}
-        
-        <NavLink
-          to="/profile"
-          className={({ isActive }) =>
-            cn(
-              "flex items-center px-4 py-2 rounded-md transition-colors",
-              isActive
-                ? "bg-ocorrencia-azul-medio text-white"
-                : "text-gray-300 hover:bg-ocorrencia-azul-medio/40 hover:text-white"
-            )
-          }
-        >
-          <Settings className="mr-3 h-5 w-5" />
-          <span>Meu Perfil</span>
-        </NavLink>
       </nav>
       
       <div className="p-4 border-t border-ocorrencia-azul-medio/30">

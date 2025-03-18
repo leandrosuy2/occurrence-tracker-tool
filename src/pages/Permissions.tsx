@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Edit, Trash2, ShieldCheck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { User as UserType } from '@/types';
 import userService from '@/services/userService';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 const Permissions: React.FC = () => {
   const [users, setUsers] = useState<UserType[]>([]);
@@ -31,6 +31,7 @@ const Permissions: React.FC = () => {
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
+      toast.error('Erro ao carregar usuários');
     } finally {
       setLoading(false);
     }
@@ -48,8 +49,10 @@ const Permissions: React.FC = () => {
       await userService.updateUserRole(selectedUser.id, data.role);
       fetchUsers();
       setEditDialogOpen(false);
+      toast.success('Permissão atualizada com sucesso');
     } catch (error) {
       console.error('Error updating user role:', error);
+      toast.error('Erro ao atualizar permissão');
     }
   };
 

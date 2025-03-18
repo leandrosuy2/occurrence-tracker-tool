@@ -24,6 +24,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   cpf: string;
+  avatar?: File;
 }
 
 export interface PoliceStation {
