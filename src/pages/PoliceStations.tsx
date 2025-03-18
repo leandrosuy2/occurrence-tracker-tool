@@ -60,6 +60,8 @@ interface PoliceStation {
   name: string;
   email: string;
   phone: string;
+  latitude: number;
+  longitude: number;
 }
 
 const center = {
@@ -122,7 +124,7 @@ const PoliceStations = () => {
     fetchStations();
   }, []);
 
-  const onSubmit = async (data: PoliceStationFormData) => {
+  const updatePoliceStation = async (id: string, data: PoliceStationFormData) => {
     try {
       const payload = {
         name: data.name,
@@ -132,18 +134,36 @@ const PoliceStations = () => {
         longitude: data.longitude,
       };
 
-      if (editingStation) {
-        await api.put(`${basePathUrlApiV1}/policeStation/${editingStation.id}`, payload);
-        toast.success('Delegacia atualizada com sucesso!');
-      } else {
-        await api.post(`${basePathUrlApiV1}/policeStation/save`, payload);
-        toast.success('Delegacia criada com sucesso!');
-      }
-      
+      await api.put(`${basePathUrlApiV1}/policeStation/${id}`, payload);
+      toast.success('Delegacia atualizada com sucesso!');
       setDialogOpen(false);
       reset();
       setEditingStation(null);
       fetchStations();
+    } catch (error) {
+      console.error('Error updating station:', error);
+      toast.error('Erro ao atualizar delegacia');
+    }
+  };
+
+  const onSubmit = async (data: PoliceStationFormData) => {
+    try {
+      if (editingStation) {
+        await updatePoliceStation(editingStation.id, data);
+      } else {
+        const payload = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          latitude: data.latitude,
+          longitude: data.longitude,
+        };
+        await api.post(`${basePathUrlApiV1}/policeStation/save`, payload);
+        toast.success('Delegacia criada com sucesso!');
+        setDialogOpen(false);
+        reset();
+        fetchStations();
+      }
     } catch (error) {
       console.error('Error saving station:', error);
       toast.error('Erro ao salvar delegacia');
