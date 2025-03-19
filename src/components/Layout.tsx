@@ -13,6 +13,7 @@ const Layout: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const user = authService.getCurrentUser();
+  const isAdmin = authService.isAdmin();
 
   const handleLogout = () => {
     authService.logout();
@@ -68,8 +69,8 @@ const Layout: React.FC = () => {
           <Outlet />
         </main>
 
-        {/* Panic Button - Available throughout the app */}
-        <PanicButton />
+        {/* Panic Button - Only shown for non-admin users */}
+        {!isAdmin && <PanicButton />}
       </div>
     </div>
   );

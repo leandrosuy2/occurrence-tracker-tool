@@ -23,14 +23,16 @@ interface OccurrencesTableProps {
   occurrences: Occurrence[];
   onUpdate: () => void;
   onEdit: (occurrence: Occurrence) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
+  isAdmin?: boolean;
 }
 
 const OccurrencesTable: React.FC<OccurrencesTableProps> = ({ 
   occurrences, 
   onUpdate,
   onEdit,
-  onDelete
+  onDelete,
+  isAdmin = false
 }) => {
   const [addresses, setAddresses] = useState<Record<number, string>>({});
   const [selectedOccurrence, setSelectedOccurrence] = useState<Occurrence | null>(null);
@@ -89,7 +91,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
       case 'homicidio': 
         return <Badge variant="destructive">Homicídio</Badge>;
       case 'furto': 
-        return <Badge variant="warning">Furto</Badge>;
+        return <Badge variant="secondary">Furto</Badge>;
       case 'roubo': 
         return <Badge variant="secondary">Roubo</Badge>;
       default: 
@@ -130,7 +132,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                   })}
                 </TableCell>
                 <TableCell>{occurrence.time}</TableCell>
-                <TableCell className="text-right">
+                <TableCell>
                   <div className="flex justify-end space-x-2">
                     <Button
                       variant="ghost"
@@ -140,22 +142,26 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                     >
                       <MapPin className="h-4 w-4 text-blue-500" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onEdit(occurrence)}
-                      className="hover:bg-yellow-100 dark:hover:bg-yellow-900"
-                    >
-                      <Pencil className="h-4 w-4 text-yellow-500" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(occurrence.id)}
-                      className="hover:bg-red-100 dark:hover:bg-red-900"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
+                    {!isAdmin && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onEdit(occurrence)}
+                          className="hover:bg-yellow-100 dark:hover:bg-yellow-900"
+                        >
+                          <Pencil className="h-4 w-4 text-yellow-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDelete(occurrence.id.toString())}
+                          className="hover:bg-red-100 dark:hover:bg-red-900"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

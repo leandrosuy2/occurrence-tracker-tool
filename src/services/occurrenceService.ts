@@ -6,9 +6,15 @@ import { OccurrenceType } from '@/components/OccurrenceTypeModal';
 const basePathUrlApiV1 = '/api/v1';
 
 const occurrenceService = {
-  createOccurrence: async (data: CreateOccurrenceDTO) => {
+  createOccurrence: async (data: FormData | CreateOccurrenceDTO) => {
     try {
-      const response = await api.post(`${basePathUrlApiV1}/ocurrences/save`, data);
+      const response = await api.post(`${basePathUrlApiV1}/ocurrences/save`, data, {
+        headers: data instanceof FormData ? {
+          'Content-Type': 'multipart/form-data'
+        } : {
+          'Content-Type': 'application/json'
+        }
+      });
       toast.success("Ocorrência registrada com sucesso!");
       return response.data;
     } catch (error) {
@@ -61,9 +67,15 @@ const occurrenceService = {
     }
   },
 
-  updateOccurrence: async (id: string, data: Partial<CreateOccurrenceDTO>) => {
+  updateOccurrence: async (id: string, data: FormData | Partial<CreateOccurrenceDTO>) => {
     try {
-      const response = await api.put(`${basePathUrlApiV1}/ocurrences/${id}`, data);
+      const response = await api.put(`${basePathUrlApiV1}/ocurrences/${id}`, data, {
+        headers: data instanceof FormData ? {
+          'Content-Type': 'multipart/form-data'
+        } : {
+          'Content-Type': 'application/json'
+        }
+      });
       toast.success("Ocorrência atualizada com sucesso!");
       return response.data;
     } catch (error) {

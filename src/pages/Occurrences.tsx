@@ -45,6 +45,7 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
 import OccurrencesTable from '@/components/OccurrencesTable';
+import authService from '@/services/authService';
 
 const Occurrences: React.FC = () => {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
@@ -58,6 +59,7 @@ const Occurrences: React.FC = () => {
   const [isMobileListing, setIsMobileListing] = useState(false);
   
   const isMobile = useIsMobile();
+  const isAdmin = authService.isAdmin();
 
   const fetchData = async () => {
     try {
@@ -165,17 +167,21 @@ const Occurrences: React.FC = () => {
                 <MapPin className="h-4 w-4 mr-2" />
                 Ver no mapa
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleEditClick(occurrence)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleDeleteClick(occurrence.id)}
-                className="text-red-600"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Excluir
-              </DropdownMenuItem>
+              {!isAdmin && (
+                <>
+                  <DropdownMenuItem onClick={() => handleEditClick(occurrence)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleDeleteClick(occurrence.id)}
+                    className="text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -216,13 +222,15 @@ const Occurrences: React.FC = () => {
               {isMobileListing ? <List className="h-4 w-4" /> : <List className="h-4 w-4" />}
             </Button>
           )}
-          <Button 
-            onClick={handleCreateClick} 
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            {!isMobile && "Nova Ocorrência"}
-          </Button>
+          {!isAdmin && (
+            <Button 
+              onClick={handleCreateClick} 
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              {!isMobile && "Nova Ocorrência"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -245,6 +253,7 @@ const Occurrences: React.FC = () => {
               onUpdate={fetchData}
               onEdit={handleEditClick}
               onDelete={(id) => handleDeleteClick(id.toString())}
+              isAdmin={isAdmin}
             />
           )}
         </CardContent>

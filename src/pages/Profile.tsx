@@ -21,7 +21,7 @@ const Profile: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  
+
   const [profileForm, setProfileForm] = useState({
     name: '',
     email: '',
@@ -29,24 +29,24 @@ const Profile: React.FC = () => {
     avatar: null as File | null,
     password: '',
   });
-  
+
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
-  
+
   const [emailForm, setEmailForm] = useState({
     newEmail: '',
     confirmEmail: '',
   });
-  
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const profile = await userService.getUserProfile();
         setUser(profile);
-        
+
         setProfileForm({
           name: profile.name || '',
           email: profile.email || '',
@@ -66,10 +66,10 @@ const Profile: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     fetchProfile();
   }, []);
-  
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -104,72 +104,72 @@ const Profile: React.FC = () => {
       formData.append('email', profileForm.email);
       formData.append('cpf', removeMask(profileForm.cpf));
       formData.append('removeAvatar', 'true');
-      
+
       const updatedUser = await userService.updateSelf(formData);
-      
+
       setProfileForm(prev => ({ ...prev, avatar: null }));
       setAvatarPreview(null);
-      
+
       // Atualizar dados do usuário no localStorage
       const currentUser = authService.getCurrentUser();
       if (currentUser) {
         currentUser.avatar = null;
         localStorage.setItem('user', JSON.stringify(currentUser));
       }
-      
+
       // Atualizar o usuário no estado
       setUser(updatedUser);
-      
+
       toast.success('Foto de perfil removida com sucesso');
     } catch (error) {
       console.error('Error removing avatar:', error);
       toast.error('Erro ao remover foto de perfil');
     }
   };
-  
+
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setProfileForm((prev) => ({ ...prev, [name]: value }));
   };
-  
+
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPasswordForm((prev) => ({ ...prev, [name]: value }));
   };
-  
+
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEmailForm((prev) => ({ ...prev, [name]: value }));
   };
-  
+
   const removeMask = (value: string) => {
     return value.replace(/[^\d]/g, '');
   };
-  
+
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) return;
 
     if (!profileForm.password) {
       toast.error('A senha é obrigatória');
       return;
     }
-    
+
     try {
       const formData = new FormData();
       formData.append('name', profileForm.name);
       formData.append('email', profileForm.email);
       formData.append('cpf', removeMask(profileForm.cpf));
       formData.append('password', profileForm.password);
-      
+
       // Corrigindo o envio do avatar
       if (profileForm.avatar instanceof File) {
         formData.append('avatar', profileForm.avatar);
       }
-      
+
       const updatedUser = await userService.updateSelf(formData);
-      
+
       // Atualizar dados do usuário no localStorage
       const currentUser = authService.getCurrentUser();
       if (currentUser) {
@@ -179,68 +179,68 @@ const Profile: React.FC = () => {
         currentUser.avatar = updatedUser.avatar;
         localStorage.setItem('user', JSON.stringify(currentUser));
       }
-      
+
       // Atualizar o usuário no estado
       setUser(updatedUser);
-      
+
       // Limpar o campo de senha após a atualização
       setProfileForm(prev => ({ ...prev, password: '' }));
-      
+
       toast.success('Perfil atualizado com sucesso');
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error('Erro ao atualizar perfil');
     }
   };
-  
+
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       toast.error('As senhas não coincidem');
       return;
     }
-    
+
     try {
       await authService.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
-      
+
       setPasswordForm({
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
       });
-      
+
       toast.success('Senha alterada com sucesso');
     } catch (error) {
       console.error('Error changing password:', error);
     }
   };
-  
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (emailForm.newEmail !== emailForm.confirmEmail) {
       toast.error('Os e-mails não coincidem');
       return;
     }
-    
+
     try {
       await authService.changeEmail(user?.email || '', emailForm.newEmail);
-      
+
       setEmailForm({
         newEmail: '',
         confirmEmail: '',
       });
-      
+
       // Atualizar o formulário de perfil com o novo e-mail
       setProfileForm((prev) => ({ ...prev, email: emailForm.newEmail }));
-      
+
       toast.success('E-mail alterado com sucesso');
     } catch (error) {
       console.error('Error changing email:', error);
     }
   };
-  
+
   const handleDeleteAccount = async () => {
     if (window.confirm('Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.')) {
       try {
@@ -252,11 +252,11 @@ const Profile: React.FC = () => {
       }
     }
   };
-  
+
   if (loading) {
     return <div className="p-8 text-center">Carregando perfil...</div>;
   }
-  
+
   return (
     <div className="space-y-6">
       <div>
@@ -265,7 +265,7 @@ const Profile: React.FC = () => {
           Gerencie suas informações pessoais e credenciais
         </p>
       </div>
-      
+
       <Tabs defaultValue="profile">
         <TabsList className="mb-4">
           <TabsTrigger value="profile">Perfil</TabsTrigger>
@@ -273,7 +273,7 @@ const Profile: React.FC = () => {
           <TabsTrigger value="email">E-mail</TabsTrigger> */}
           <TabsTrigger value="danger">Conta</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="profile">
           <Card>
             <CardHeader>
@@ -283,121 +283,127 @@ const Profile: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleProfileSubmit} className="space-y-6">
-                <div className="space-y-4">
-                  <Label className="text-center block">Foto de Perfil</Label>
-                  <div className="flex flex-col items-center justify-center space-y-4">
-                    <Avatar className="w-32 h-32">
-                      <AvatarImage 
-                        src={avatarPreview || user?.avatar} 
-                        alt="Foto de perfil" 
-                      />
-                      <AvatarFallback>
-                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-2 text-center">
-                      <div className="flex justify-center gap-2">
-                        <Input
-                          id="avatar"
-                          name="avatar"
-                          type="file"
-                          accept="image/jpeg,image/png,image/gif"
-                          onChange={handleAvatarChange}
-                          className="hidden"
+              {user?.isAdmin ? (
+                <div className="text-center p-4">
+                  <p>Administradores não podem alterar informações de perfil.</p>
+                </div>
+              ) : (
+                <form onSubmit={handleProfileSubmit} className="space-y-6">
+                  <div className="space-y-4">
+                    <Label className="text-center block">Foto de Perfil</Label>
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <Avatar className="w-32 h-32">
+                        <AvatarImage
+                          src={avatarPreview || user?.avatar}
+                          alt="Foto de perfil"
                         />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => document.getElementById('avatar')?.click()}
-                        >
-                          Escolher foto
-                        </Button>
-                        {(user?.avatar || avatarPreview) && (
+                        <AvatarFallback>
+                          {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-2 text-center">
+                        <div className="flex justify-center gap-2">
+                          <Input
+                            id="avatar"
+                            name="avatar"
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif"
+                            onChange={handleAvatarChange}
+                            className="hidden"
+                          />
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={handleRemoveAvatar}
-                            className="text-ocorrencia-vermelho hover:text-ocorrencia-vermelho/90"
+                            onClick={() => document.getElementById('avatar')?.click()}
                           >
-                            Remover foto
+                            Escolher foto
                           </Button>
-                        )}
+                          {(user?.avatar || avatarPreview) && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleRemoveAvatar}
+                              className="text-ocorrencia-vermelho hover:text-ocorrencia-vermelho/90"
+                            >
+                              Remover foto
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          JPG, PNG ou GIF. Tamanho máximo de 5MB.
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        JPG, PNG ou GIF. Tamanho máximo de 5MB.
-                      </p>
                     </div>
                   </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome completo</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={profileForm.name}
-                    onChange={handleProfileChange}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={profileForm.email}
-                    onChange={handleProfileChange}
-                    required
-                    disabled
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Para alterar seu e-mail, use a aba "E-mail"
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF</Label>
-                  <InputMask
-                    mask="999.999.999-99"
-                    value={profileForm.cpf}
-                    onChange={handleProfileChange}
-                    required
-                  >
-                    {(inputProps: any) => (
-                      <Input
-                        {...inputProps}
-                        id="cpf"
-                        name="cpf"
-                        placeholder="000.000.000-00"
-                      />
-                    )}
-                  </InputMask>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={profileForm.password}
-                    onChange={handleProfileChange}
-                    placeholder="Digite sua senha"
-                    required
-                  />
-                </div>
-                
-                <Button type="submit" className="bg-ocorrencia-azul-escuro hover:bg-ocorrencia-azul-medio">
-                  Salvar Alterações
-                </Button>
-              </form>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome completo</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      value={profileForm.name}
+                      onChange={handleProfileChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={profileForm.email}
+                      onChange={handleProfileChange}
+                      required
+                      disabled
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Para alterar seu e-mail, use a aba "E-mail"
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cpf">CPF</Label>
+                    <InputMask
+                      mask="999.999.999-99"
+                      value={profileForm.cpf}
+                      onChange={handleProfileChange}
+                      required
+                    >
+                      {(inputProps: any) => (
+                        <Input
+                          {...inputProps}
+                          id="cpf"
+                          name="cpf"
+                          placeholder="000.000.000-00"
+                        />
+                      )}
+                    </InputMask>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Senha</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      value={profileForm.password}
+                      onChange={handleProfileChange}
+                      placeholder="Digite sua senha"
+                      required
+                    />
+                  </div>
+
+                  <Button type="submit" className="bg-ocorrencia-azul-escuro hover:bg-ocorrencia-azul-medio">
+                    Salvar Alterações
+                  </Button>
+                </form>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="password">
           <Card>
             <CardHeader>
@@ -419,7 +425,7 @@ const Profile: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">Nova senha</Label>
                   <Input
@@ -431,7 +437,7 @@ const Profile: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirme a nova senha</Label>
                   <Input
@@ -443,7 +449,7 @@ const Profile: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <Button type="submit" className="bg-ocorrencia-azul-escuro hover:bg-ocorrencia-azul-medio">
                   Alterar Senha
                 </Button>
@@ -451,7 +457,7 @@ const Profile: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="email">
           <Card>
             <CardHeader>
@@ -470,7 +476,7 @@ const Profile: React.FC = () => {
                     disabled
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="newEmail">Novo e-mail</Label>
                   <Input
@@ -482,7 +488,7 @@ const Profile: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="confirmEmail">Confirme o novo e-mail</Label>
                   <Input
@@ -494,7 +500,7 @@ const Profile: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <Button type="submit" className="bg-ocorrencia-azul-escuro hover:bg-ocorrencia-azul-medio">
                   Alterar E-mail
                 </Button>
@@ -502,7 +508,7 @@ const Profile: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="danger">
           <Card>
             <CardHeader>

@@ -10,7 +10,7 @@ import Map from "./Map";
 import occurrenceService from "@/services/occurrenceService";
 import policeStationService from "@/services/policeStationService";
 import { Occurrence, PoliceStation } from "@/types";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, ImagePlus, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import authService from "@/services/authService";
 
@@ -37,6 +37,8 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [locationSelected, setLocationSelected] = useState(Boolean(occurrence));
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photosPreviews, setPhotosPreviews] = useState<string[]>([]);
   
   const isMobile = useIsMobile();
   const isAdmin = authService.isAdmin();
@@ -94,6 +96,45 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
     setLocationSelected(true);
   };
 
+  const handlePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles: File[] = [];
+    const validPreviews: string[] = [];
+    
+    files.forEach(file => {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error(`A foto ${file.name} excede o limite de 5MB`);
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        toast.error(`O arquivo ${file.name} não é uma imagem válida`);
+        return;
+      }
+      
+      validFiles.push(file);
+      validPreviews.push(URL.createObjectURL(file));
+    });
+
+    setPhotos(prevPhotos => [...prevPhotos, ...validFiles]);
+    setPhotosPreviews(prevPreviews => [...prevPreviews, ...validPreviews]);
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setPhotos(prevPhotos => {
+      const newPhotos = [...prevPhotos];
+      newPhotos.splice(index, 1);
+      return newPhotos;
+    });
+    
+    setPhotosPreviews(prevPreviews => {
+      const newPreviews = [...prevPreviews];
+      URL.revokeObjectURL(newPreviews[index]);
+      newPreviews.splice(index, 1);
+      return newPreviews;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -102,30 +143,29 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
       return;
     }
     
-    // if (isAdmin && !policeStationId) {
-    //   toast.error('Por favor, selecione uma delegacia');
-    //   return;
-    // }
-    
     try {
       setLoading(true);
       
-      const occurrenceData: Omit<Occurrence, 'id'> = {
-        title,
-        description,
-        type,
-        latitude,
-        longitude,
-        date,
-        time,
-        policeStation_id: isAdmin ? policeStationId : undefined,
-      };
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('type', type);
+      formData.append('latitude', latitude.toString());
+      formData.append('longitude', longitude.toString());
+      formData.append('date', date);
+      formData.append('time', time);
+      if (isAdmin && policeStationId) {
+        formData.append('policeStation_id', policeStationId);
+      }
+      photos.forEach(photo => {
+        formData.append('photos', photo);
+      });
       
       if (occurrence?.id) {
-        await occurrenceService.updateOccurrence(occurrence.id, occurrenceData);
+        await occurrenceService.updateOccurrence(occurrence.id, formData);
         toast.success('Ocorrência atualizada com sucesso!');
       } else {
-        await occurrenceService.createOccurrence(occurrenceData);
+        await occurrenceService.createOccurrence(formData);
         toast.success('Ocorrência registrada com sucesso!');
       }
       
@@ -288,6 +328,66 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
               </p>
             )}
           </div>
+
+          {!isAdmin && (
+            <div className="space-y-2 col-span-full">
+              <Label htmlFor="photos" className="flex items-center gap-2">
+                Fotos
+                <span className="text-xs text-muted-foreground font-normal">
+                  (Máximo 5MB por foto)
+                </span>
+              </Label>
+              <div className="flex flex-col items-center space-y-4">
+                {photosPreviews.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
+                    {photosPreviews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-[200px] object-cover rounded-lg"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2"
+                          onClick={() => handleRemovePhoto(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                
+                <div className="flex items-center justify-center w-full">
+                  <label
+                    htmlFor="photos"
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50"
+                  >
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <ImagePlus className="w-8 h-8 mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Clique para adicionar fotos
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Você pode selecionar várias fotos
+                      </p>
+                    </div>
+                    <Input
+                      id="photos"
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotosChange}
+                      className="hidden"
+                      multiple
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
         
         <CardFooter className="flex flex-col sm:flex-row gap-4 justify-between sticky bottom-0 bg-card pt-4 border-t">

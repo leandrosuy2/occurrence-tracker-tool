@@ -82,5 +82,5 @@ export interface CreateOccurrenceDTO {
   time: string;
   latitude: number;
   longitude: number;
-  policeStation_id: number;
+  policeStation_id?: number;
 }
