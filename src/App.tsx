@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { toast } from 'sonner';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -19,8 +20,6 @@ import Permissions from "./pages/Permissions";
 import "./services/websocket";
 import { NewOccurrenceModal } from './components/NewOccurrenceModal';
 import { Occurrence } from '@/types';
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import authService from '@/services/authService';
 
 const queryClient = new QueryClient();
@@ -53,8 +52,8 @@ const App = () => {
   };
 
   const handleRejectOccurrence = () => {
-    console.log('App - Ocorrência rejeitada');
-    toast.info('Ocorrência rejeitada');
+    // console.log('App - Ocorrência rejeitada');
+    // toast.info('Ocorrência rejeitada');
   };
 
   const handleCloseModal = () => {

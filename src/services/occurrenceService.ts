@@ -1,6 +1,7 @@
 import api from './api';
 import { toast } from 'sonner';
 import { Occurrence, CreateOccurrenceDTO } from '@/types';
+import { OccurrenceType } from '@/components/OccurrenceTypeModal';
 
 const basePathUrlApiV1 = '/api/v1';
 
@@ -13,6 +14,27 @@ const occurrenceService = {
     } catch (error) {
       console.error('Error creating occurrence:', error);
       toast.error('Erro ao criar ocorrência');
+      throw error;
+    }
+  },
+
+  createQuickOccurrence: async (latitude: number, longitude: number, type: OccurrenceType) => {
+    try {
+      const data: CreateOccurrenceDTO = {
+        type,
+        latitude,
+        longitude,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().split(' ')[0],
+        policeStation_id: 0, // Será definido pelo backend
+      };
+
+      const response = await api.post(`${basePathUrlApiV1}/ocurrences/quick`, data);
+      toast.success("Ocorrência rápida registrada com sucesso!");
+      return response.data;
+    } catch (error) {
+      console.error('Error creating quick occurrence:', error);
+      toast.error('Erro ao registrar ocorrência rápida');
       throw error;
     }
   },
@@ -59,21 +81,6 @@ const occurrenceService = {
     } catch (error) {
       console.error('Error deleting occurrence:', error);
       toast.error('Erro ao excluir ocorrência');
-      throw error;
-    }
-  },
-
-  createQuickOccurrence: async (latitude: number, longitude: number) => {
-    try {
-      const response = await api.post(`${basePathUrlApiV1}/ocurrences/quick`, {
-        latitude,
-        longitude
-      });
-      toast.success("Ocorrência rápida registrada com sucesso!");
-      return response.data;
-    } catch (error) {
-      console.error('Error creating quick occurrence:', error);
-      toast.error('Erro ao criar ocorrência rápida');
       throw error;
     }
   },

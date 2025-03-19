@@ -15,16 +15,19 @@ import userService from '@/services/userService';
 import authService from '@/services/authService';
 import { toast } from 'sonner';
 import InputMask from 'react-input-mask';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const Profile: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   
   const [profileForm, setProfileForm] = useState({
     name: '',
     email: '',
     cpf: '',
     avatar: null as File | null,
+    password: '',
   });
   
   const [passwordForm, setPasswordForm] = useState({
@@ -49,7 +52,13 @@ const Profile: React.FC = () => {
           email: profile.email || '',
           cpf: profile.cpf || '',
           avatar: null,
+          password: '',
         });
+
+        // Se houver avatar, atualizar a preview
+        if (profile.avatar) {
+          setAvatarPreview(profile.avatar);
+        }
       } catch (error) {
         console.error('Error fetching profile:', error);
         toast.error('Erro ao carregar perfil');
@@ -61,14 +70,66 @@ const Profile: React.FC = () => {
     fetchProfile();
   }, []);
   
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, files } = e.target;
-    
-    if (name === 'avatar' && files && files.length > 0) {
-      setProfileForm((prev) => ({ ...prev, avatar: files[0] }));
-    } else {
-      setProfileForm((prev) => ({ ...prev, [name]: value }));
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Tipo de arquivo inválido. Use JPG, PNG ou GIF.');
+      return;
     }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      toast.error('Arquivo muito grande. O tamanho máximo é 5MB.');
+      return;
+    }
+
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
+    setProfileForm(prev => ({ ...prev, avatar: file }));
+
+    // Cleanup preview URL when component unmounts
+    return () => URL.revokeObjectURL(previewUrl);
+  };
+
+  const handleRemoveAvatar = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('name', profileForm.name);
+      formData.append('email', profileForm.email);
+      formData.append('cpf', removeMask(profileForm.cpf));
+      formData.append('removeAvatar', 'true');
+      
+      const updatedUser = await userService.updateSelf(formData);
+      
+      setProfileForm(prev => ({ ...prev, avatar: null }));
+      setAvatarPreview(null);
+      
+      // Atualizar dados do usuário no localStorage
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        currentUser.avatar = null;
+        localStorage.setItem('user', JSON.stringify(currentUser));
+      }
+      
+      // Atualizar o usuário no estado
+      setUser(updatedUser);
+      
+      toast.success('Foto de perfil removida com sucesso');
+    } catch (error) {
+      console.error('Error removing avatar:', error);
+      toast.error('Erro ao remover foto de perfil');
+    }
+  };
+  
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setProfileForm((prev) => ({ ...prev, [name]: value }));
   };
   
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,18 +150,25 @@ const Profile: React.FC = () => {
     e.preventDefault();
     
     if (!user) return;
+
+    if (!profileForm.password) {
+      toast.error('A senha é obrigatória');
+      return;
+    }
     
     try {
       const formData = new FormData();
       formData.append('name', profileForm.name);
       formData.append('email', profileForm.email);
       formData.append('cpf', removeMask(profileForm.cpf));
+      formData.append('password', profileForm.password);
       
-      if (profileForm.avatar) {
+      // Corrigindo o envio do avatar
+      if (profileForm.avatar instanceof File) {
         formData.append('avatar', profileForm.avatar);
       }
       
-      await userService.updateSelf(formData);
+      const updatedUser = await userService.updateSelf(formData);
       
       // Atualizar dados do usuário no localStorage
       const currentUser = authService.getCurrentUser();
@@ -108,8 +176,15 @@ const Profile: React.FC = () => {
         currentUser.name = profileForm.name;
         currentUser.email = profileForm.email;
         currentUser.cpf = profileForm.cpf;
+        currentUser.avatar = updatedUser.avatar;
         localStorage.setItem('user', JSON.stringify(currentUser));
       }
+      
+      // Atualizar o usuário no estado
+      setUser(updatedUser);
+      
+      // Limpar o campo de senha após a atualização
+      setProfileForm(prev => ({ ...prev, password: '' }));
       
       toast.success('Perfil atualizado com sucesso');
     } catch (error) {
@@ -194,8 +269,8 @@ const Profile: React.FC = () => {
       <Tabs defaultValue="profile">
         <TabsList className="mb-4">
           <TabsTrigger value="profile">Perfil</TabsTrigger>
-          <TabsTrigger value="password">Senha</TabsTrigger>
-          <TabsTrigger value="email">E-mail</TabsTrigger>
+          {/* <TabsTrigger value="password">Senha</TabsTrigger>
+          <TabsTrigger value="email">E-mail</TabsTrigger> */}
           <TabsTrigger value="danger">Conta</TabsTrigger>
         </TabsList>
         
@@ -208,16 +283,52 @@ const Profile: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleProfileSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="avatar">Foto de Perfil</Label>
-                  <Input
-                    id="avatar"
-                    name="avatar"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleProfileChange}
-                  />
+              <form onSubmit={handleProfileSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <Label className="text-center block">Foto de Perfil</Label>
+                  <div className="flex flex-col items-center justify-center space-y-4">
+                    <Avatar className="w-32 h-32">
+                      <AvatarImage 
+                        src={avatarPreview || user?.avatar} 
+                        alt="Foto de perfil" 
+                      />
+                      <AvatarFallback>
+                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-2 text-center">
+                      <div className="flex justify-center gap-2">
+                        <Input
+                          id="avatar"
+                          name="avatar"
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif"
+                          onChange={handleAvatarChange}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById('avatar')?.click()}
+                        >
+                          Escolher foto
+                        </Button>
+                        {(user?.avatar || avatarPreview) && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleRemoveAvatar}
+                            className="text-ocorrencia-vermelho hover:text-ocorrencia-vermelho/90"
+                          >
+                            Remover foto
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        JPG, PNG ou GIF. Tamanho máximo de 5MB.
+                      </p>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
@@ -264,6 +375,19 @@ const Profile: React.FC = () => {
                       />
                     )}
                   </InputMask>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={profileForm.password}
+                    onChange={handleProfileChange}
+                    placeholder="Digite sua senha"
+                    required
+                  />
                 </div>
                 
                 <Button type="submit" className="bg-ocorrencia-azul-escuro hover:bg-ocorrencia-azul-medio">

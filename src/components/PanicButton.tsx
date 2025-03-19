@@ -13,16 +13,24 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
+import OccurrenceTypeModal, { OccurrenceType } from './OccurrenceTypeModal';
 
 const PanicButton: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [selectedType, setSelectedType] = useState<OccurrenceType | null>(null);
 
   const handlePanicClick = () => {
     setIsDialogOpen(true);
   };
 
   const handleConfirm = async () => {
+    if (!selectedType) {
+      toast.error("Por favor, selecione o tipo da ocorrência");
+      return;
+    }
+
     try {
       setIsLoading(true);
       
@@ -37,9 +45,11 @@ const PanicButton: React.FC = () => {
           try {
             await occurrenceService.createQuickOccurrence(
               position.coords.latitude,
-              position.coords.longitude
+              position.coords.longitude,
+              selectedType
             );
             setIsDialogOpen(false);
+            setSelectedType(null);
           } catch (error) {
             console.error('Error creating quick occurrence:', error);
           } finally {
@@ -94,9 +104,26 @@ const PanicButton: React.FC = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Registrar Ocorrência Rápida</AlertDialogTitle>
-            <AlertDialogDescription>
-              Você está prestes a registrar uma ocorrência rápida com sua localização atual.
-              Esta ação não pode ser desfeita. Deseja continuar?
+            <AlertDialogDescription className="space-y-4">
+              <p>Você está prestes a registrar uma ocorrência rápida com sua localização atual.
+              Esta ação não pode ser desfeita.</p>
+              
+              <div className="flex flex-col gap-2">
+                <Button
+                  variant={selectedType ? "outline" : "secondary"}
+                  onClick={() => setIsTypeModalOpen(true)}
+                  className="w-full flex items-center gap-2"
+                >
+                  {selectedType ? (
+                    <span>{selectedType}</span>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>Selecione o tipo da ocorrência</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -104,13 +131,19 @@ const PanicButton: React.FC = () => {
             <AlertDialogAction 
               onClick={handleConfirm}
               className="bg-red-600 hover:bg-red-700"
-              disabled={isLoading}
+              disabled={isLoading || !selectedType}
             >
               {isLoading ? "Registrando..." : "Registrar Ocorrência"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <OccurrenceTypeModal
+        open={isTypeModalOpen}
+        onOpenChange={setIsTypeModalOpen}
+        onSelect={setSelectedType}
+      />
     </>
   );
 };

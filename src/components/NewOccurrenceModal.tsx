@@ -63,21 +63,7 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [estimatedTime, setEstimatedTime] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(MAX_RESPONSE_TIME);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-
-  // Verifica se o usuário é admin quando o componente é montado
-  useEffect(() => {
-    const checkAdmin = () => {
-      const user = authService.getCurrentUser();
-      console.log('Modal - Current user:', user);
-      const adminStatus = authService.isAdmin();
-      console.log('Modal - Is admin:', adminStatus);
-      setIsAdmin(adminStatus);
-    };
-
-    checkAdmin();
-  }, []);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -125,17 +111,13 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
 
   // Efeito para controlar a abertura do modal quando uma nova ocorrência chegar
   useEffect(() => {
-    console.log('Modal - Efeito de ocorrência:', { occurrence, isAdmin });
-    if (occurrence && isAdmin) {
+    console.log('Modal - Efeito de ocorrência:', { occurrence });
+    if (occurrence) {
       console.log('Modal - Abrindo modal');
       setIsOpen(true);
       setTimeLeft(MAX_RESPONSE_TIME);
     }
-  }, [occurrence, isAdmin]);
-
-  console.log('Modal render - occurrence:', occurrence);
-  console.log('Modal render - isAdmin:', isAdmin);
-  console.log('Modal render - isOpen:', isOpen);
+  }, [occurrence]);
 
   const handleClose = () => {
     console.log('Modal - Fechando modal');
@@ -157,9 +139,8 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
     handleClose();
   };
 
-  // Não renderiza o modal se não houver ocorrência ou se o usuário não for admin
-  if (!occurrence || !isAdmin) {
-    console.log('Modal não renderizado - Razão:', !occurrence ? 'Sem ocorrência' : 'Usuário não é admin');
+  // Não renderiza o modal se não houver ocorrência
+  if (!occurrence) {
     return null;
   }
 

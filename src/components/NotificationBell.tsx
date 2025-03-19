@@ -27,18 +27,18 @@ const NotificationBell: React.FC = () => {
   const navigate = useNavigate();
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    // Carregar o arquivo de áudio
-    audioRef.current = new Audio('/notification.mp3');
+  // useEffect(() => {
+  //   // Carregar o arquivo de áudio
+  //   audioRef.current = new Audio('/notification.mp3');
 
-    // Buscar notificações iniciais
-    fetchNotifications();
+  //   // Buscar notificações iniciais
+  //   fetchNotifications();
 
-    // Configurar polling para novas notificações
-    const interval = setInterval(fetchNotifications, 30000); // Verificar a cada 30 segundos
+  //   // Configurar polling para novas notificações
+  //   const interval = setInterval(fetchNotifications, 30000); // Verificar a cada 30 segundos
 
-    return () => clearInterval(interval);
-  }, []);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   const fetchNotifications = async () => {
     try {

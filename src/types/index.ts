@@ -1,3 +1,5 @@
+import { OccurrenceType } from '@/components/OccurrenceTypeModal';
+
 export interface User {
   id: string;
   name: string;
@@ -47,7 +49,7 @@ export interface Occurrence {
   id: string;
   title: string | null;
   description: string | null;
-  type: 'homicidio' | 'furto' | 'roubo' | 'outros';
+  type: OccurrenceType;
   latitude: number;
   longitude: number;
   date: string;
@@ -75,7 +77,7 @@ export interface OccurrenceStats {
 export interface CreateOccurrenceDTO {
   title?: string;
   description?: string;
-  type?: 'homicidio' | 'furto' | 'roubo' | 'outros';
+  type: OccurrenceType;
   date: string;
   time: string;
   latitude: number;
