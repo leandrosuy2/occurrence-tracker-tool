@@ -102,10 +102,10 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
       return;
     }
     
-    if (isAdmin && !policeStationId) {
-      toast.error('Por favor, selecione uma delegacia');
-      return;
-    }
+    // if (isAdmin && !policeStationId) {
+    //   toast.error('Por favor, selecione uma delegacia');
+    //   return;
+    // }
     
     try {
       setLoading(true);
@@ -178,7 +178,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                   <SelectItem value="Perturbação do sossego público">Perturbação do sossego público</SelectItem>
                   <SelectItem value="Posse de armas brancas ou de fogo">Posse de armas brancas ou de fogo</SelectItem>
                   <SelectItem value="Pessoa suspeita">Pessoa suspeita</SelectItem>
-                  <SelectItem value="Roubos e furtos">Roubos e furtos</SelectItem>
+                  <SelectItem value="ROUBO">Roubos e furtos</SelectItem>
                   <SelectItem value="Tentativa de suicídio">Tentativa de suicídio</SelectItem>
                   <SelectItem value="Uso e tráfico de drogas">Uso e tráfico de drogas</SelectItem>
                   <SelectItem value="Violência doméstica">Violência doméstica</SelectItem>
@@ -210,7 +210,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
               />
             </div>
             
-            {isAdmin && (
+            {/* {isAdmin && (
               <div className="space-y-2">
                 <Label htmlFor="policeStation">Delegacia</Label>
                 <Select
@@ -229,7 +229,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-            )}
+            )} */}
 
             <div className="space-y-2 flex items-end">
               <Button 

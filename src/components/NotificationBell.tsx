@@ -50,7 +50,7 @@ const NotificationBell: React.FC = () => {
           Authorization: `Bearer ${token}`
         }
       });
-      console.log('Notifications response:', response.data);
+      // console.log('Notifications response:', response.data);
       
       const newNotifications = response.data;
       

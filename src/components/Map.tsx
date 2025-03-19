@@ -120,7 +120,7 @@ const Map: React.FC<MapProps> = ({
     
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        console.log('Location obtained:', position.coords);
+        // console.log('Location obtained:', position.coords);
         const newLocation: [number, number] = [position.coords.latitude, position.coords.longitude];
         setCurrentLocation(newLocation);
         if (mapRef.current) {
