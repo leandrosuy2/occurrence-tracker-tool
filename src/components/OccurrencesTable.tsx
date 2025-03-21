@@ -152,14 +152,14 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                         >
                           <Pencil className="h-4 w-4 text-yellow-500" />
                         </Button>
-                        <Button
+                        {/* <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => onDelete(occurrence.id.toString())}
                           className="hover:bg-red-100 dark:hover:bg-red-900"
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                        </Button> */}
                       </>
                     )}
                   </div>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { toast } from "sonner";
 
-const API_URL = 'http://147.79.87.185:3000';
+const API_URL = 'https://l2m.tech';
 // const API_URL = 'http://localhost:3000';
 export const basePathUrlApiV1 = "/api/v1";
 
@@ -12,9 +12,15 @@ const api = axios.create({
   },
 });
 
+// Inicializa o token no header da API se existir
+const token = localStorage.getItem('token');
+if (token) {
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
+
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('@auth:token'); // Pegando o token do localStorage
+  const token = localStorage.getItem('token');
   
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

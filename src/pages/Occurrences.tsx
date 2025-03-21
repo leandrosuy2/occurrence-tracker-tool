@@ -15,7 +15,8 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu";
 import { 
   AlertTriangle, 
@@ -25,7 +26,8 @@ import {
   Edit, 
   Trash2, 
   MapPin,
-  List 
+  List,
+  Filter
 } from 'lucide-react';
 import OccurrenceForm from '@/components/OccurrenceForm';
 import Map from '@/components/Map';
@@ -49,6 +51,7 @@ import authService from '@/services/authService';
 
 const Occurrences: React.FC = () => {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
+  const [filteredOccurrences, setFilteredOccurrences] = useState<Occurrence[]>([]);
   const [policeStations, setPoliceStations] = useState<PoliceStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -57,16 +60,32 @@ const Occurrences: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [occurrenceToDelete, setOccurrenceToDelete] = useState<string | null>(null);
   const [isMobileListing, setIsMobileListing] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   
   const isMobile = useIsMobile();
   const isAdmin = authService.isAdmin();
 
+  // Lista de tipos de ocorrências disponíveis
+  const occurrenceTypes = [
+    'Não especificado',
+    'Posse de armas brancas ou de fogo',
+    'Furto',
+    'Roubo',
+    'Homicídio',
+    'Agressão',
+    'Vandalismo',
+    'Outros'
+  ];
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await occurrenceService.getUserOccurrences();
+      const response = isAdmin 
+        ? await occurrenceService.getAllOccurrences()
+        : await occurrenceService.getUserOccurrences();
       const occurrencesData = response.data || [];
-      setOccurrences(Array.isArray(occurrencesData) ? occurrencesData : []);
+      setOccurrences(occurrencesData);
+      setFilteredOccurrences(occurrencesData);
       
       const stationsData = await policeStationService.getAllPoliceStations();
       setPoliceStations(stationsData);
@@ -74,6 +93,7 @@ const Occurrences: React.FC = () => {
       console.error('Error fetching occurrences:', error);
       toast.error('Erro ao carregar ocorrências');
       setOccurrences([]);
+      setFilteredOccurrences([]);
     } finally {
       setLoading(false);
     }
@@ -82,6 +102,19 @@ const Occurrences: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Efeito para filtrar ocorrências quando os tipos selecionados mudarem
+  useEffect(() => {
+    if (selectedTypes.length === 0) {
+      setFilteredOccurrences(occurrences);
+      return;
+    }
+
+    const filtered = occurrences.filter(occ => 
+      selectedTypes.includes(occ.type || 'Não especificado')
+    );
+    setFilteredOccurrences(filtered);
+  }, [selectedTypes, occurrences]);
 
   const handleCreateClick = () => {
     setSelectedOccurrence(null);
@@ -140,7 +173,16 @@ const Occurrences: React.FC = () => {
       default: return 'Outros';
     }
   };
-  
+
+  const toggleTypeFilter = (type: string) => {
+    setSelectedTypes(prev => {
+      if (prev.includes(type)) {
+        return prev.filter(t => t !== type);
+      }
+      return [...prev, type];
+    });
+  };
+
   // Mobile card list view for occurrences
   const OccurrenceCard = ({ occurrence }: { occurrence: Occurrence }) => (
     <Card className="mb-4">
@@ -209,10 +251,29 @@ const Occurrences: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold">Ocorrências</h1>
           <p className="text-muted-foreground">
-            Gerencie suas ocorrências registradas
+            Gerencie {isAdmin ? "todas" : "suas"} ocorrências registradas
           </p>
         </div>
         <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                {!isMobile && "Filtrar por Tipo"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {occurrenceTypes.map((type) => (
+                <DropdownMenuCheckboxItem
+                  key={type}
+                  checked={selectedTypes.includes(type)}
+                  onCheckedChange={() => toggleTypeFilter(type)}
+                >
+                  {type}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           {isMobile && (
             <Button 
               onClick={() => setIsMobileListing(!isMobileListing)} 
@@ -236,20 +297,20 @@ const Occurrences: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Minhas Ocorrências</CardTitle>
+          <CardTitle>Total de Ocorrências</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="py-10 text-center">
               <p>Carregando ocorrências...</p>
             </div>
-          ) : occurrences.length === 0 ? (
+          ) : filteredOccurrences.length === 0 ? (
             <div className="py-10 text-center">
               <p>Nenhuma ocorrência encontrada</p>
             </div>
           ) : (
             <OccurrencesTable 
-              occurrences={occurrences} 
+              occurrences={filteredOccurrences} 
               onUpdate={fetchData}
               onEdit={handleEditClick}
               onDelete={(id) => handleDeleteClick(id.toString())}

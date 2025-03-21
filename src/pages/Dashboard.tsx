@@ -26,32 +26,6 @@ import {
   Line
 } from 'recharts';
 
-// Dados fake apenas para os gráficos
-const FAKE_GRAPH_DATA = [
-  { type: 'Roubo', count: 45, recent: 12 },
-  { type: 'Furto', count: 38, recent: 8 },
-  { type: 'Vandalismo', count: 25, recent: 5 },
-  { type: 'Agressão', count: 20, recent: 7 },
-  { type: 'Assalto', count: 15, recent: 4 },
-  { type: 'Ameaça', count: 18, recent: 6 },
-  { type: 'Outros', count: 28, recent: 9 }
-];
-
-const FAKE_MONTHLY_DATA = [
-  { month: 'Jan', count: 65 },
-  { month: 'Fev', count: 59 },
-  { month: 'Mar', count: 80 },
-  { month: 'Abr', count: 81 },
-  { month: 'Mai', count: 56 },
-  { month: 'Jun', count: 55 },
-  { month: 'Jul', count: 40 },
-  { month: 'Ago', count: 45 },
-  { month: 'Set', count: 60 },
-  { month: 'Out', count: 75 },
-  { month: 'Nov', count: 85 },
-  { month: 'Dez', count: 90 }
-];
-
 const COLORS = ['#FF4B4B', '#FFA726', '#66BB6A', '#42A5F5', '#7E57C2', '#EC407A', '#26A69A'];
 
 const Dashboard: React.FC = () => {
@@ -63,14 +37,65 @@ const Dashboard: React.FC = () => {
     recent: 0
   });
   const [markers, setMarkers] = useState([]);
+  const [graphData, setGraphData] = useState({
+    typeData: [],
+    monthlyData: []
+  });
   
   const isMobile = useIsMobile();
   const isAdmin = authService.isAdmin();
 
+  const processGraphData = (occurrences: Occurrence[]) => {
+    // Processa dados por tipo de ocorrência
+    const typeCounts = occurrences.reduce((acc: { [key: string]: { count: number, recent: number } }, occ) => {
+      const type = occ.type || 'Não especificado';
+      if (!acc[type]) {
+        acc[type] = { count: 0, recent: 0 };
+      }
+      acc[type].count++;
+
+      // Verifica se é uma ocorrência recente (últimos 7 dias)
+      const occDate = new Date(occ.date);
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      if (occDate >= sevenDaysAgo) {
+        acc[type].recent++;
+      }
+
+      return acc;
+    }, {});
+
+    const typeData = Object.entries(typeCounts).map(([type, data]) => ({
+      type,
+      count: data.count,
+      recent: data.recent
+    }));
+
+    // Processa dados mensais
+    const monthlyCounts = occurrences.reduce((acc: { [key: string]: number }, occ) => {
+      const date = new Date(occ.date);
+      const month = date.toLocaleString('pt-BR', { month: 'short' });
+      acc[month] = (acc[month] || 0) + 1;
+      return acc;
+    }, {});
+
+    const monthlyData = Object.entries(monthlyCounts).map(([month, count]) => ({
+      month,
+      count
+    }));
+
+    setGraphData({
+      typeData,
+      monthlyData
+    });
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await occurrenceService.getUserOccurrences();
+      const response = isAdmin 
+        ? await occurrenceService.getAllOccurrences()
+        : await occurrenceService.getUserOccurrences();
       const occurrencesData = response.data || [];
       setOccurrences(occurrencesData);
       
@@ -87,6 +112,9 @@ const Dashboard: React.FC = () => {
       }).length;
 
       setStats({ total, recent });
+      
+      // Processa dados para os gráficos
+      processGraphData(occurrencesData);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast.error('Erro ao carregar dados do dashboard');
@@ -129,7 +157,7 @@ const Dashboard: React.FC = () => {
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Minhas Ocorrências</CardTitle>
+            <CardTitle className="text-sm font-medium">{isAdmin ? "Total" : "Minhas"} Ocorrências</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -174,19 +202,6 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Mapa de Delegacias</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[500px]">
-          <Map 
-            occurrences={[]} 
-            policeStations={policeStations}
-            height="h-[500px]"
-          />
-        </CardContent>
-      </Card>
-
       {/* Gráficos (apenas para administradores) */}
       {isAdmin && (
         <>
@@ -198,7 +213,7 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={FAKE_GRAPH_DATA}>
+                  <BarChart data={graphData.typeData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="type" 
@@ -258,7 +273,7 @@ const Dashboard: React.FC = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={FAKE_GRAPH_DATA}
+                      data={graphData.typeData}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -268,7 +283,7 @@ const Dashboard: React.FC = () => {
                       dataKey="count"
                       nameKey="type"
                     >
-                      {FAKE_GRAPH_DATA.map((entry, index) => (
+                      {graphData.typeData.map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
                           fill={COLORS[index % COLORS.length]}
@@ -304,7 +319,7 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={FAKE_MONTHLY_DATA}>
+                  <LineChart data={graphData.monthlyData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="month"
