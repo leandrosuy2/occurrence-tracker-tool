@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useWebSocket } from '@/hooks/useWebSocket';
+import { formatOccurrenceType } from '@/utils/occurrenceUtils';
 
 interface Notification {
   id: string;
@@ -19,6 +20,7 @@ interface Notification {
   date: string;
   time: string;
   read: boolean;
+  isQuick?: boolean;
 }
 
 interface NotificationButtonProps {
@@ -43,17 +45,10 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
     if (!audioRef.current) return;
 
     try {
-      // Se o usuário ainda não interagiu, tenta reproduzir com userGesture
-      if (!hasUserInteracted) {
-        await audioRef.current.play();
-      } else {
-        // Se já houve interação, reproduz normalmente
-        audioRef.current.currentTime = 0;
-        await audioRef.current.play();
-      }
+      audioRef.current.currentTime = 0;
+      await audioRef.current.play();
     } catch (error) {
       console.log('Erro ao tocar som:', error);
-      // Não mostra erro para o usuário, apenas registra no console
     }
   };
 
@@ -68,13 +63,21 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
       console.log('Nova ocorrência recebida via WebSocket:', lastMessage.data);
       
       const occurrence = lastMessage.data;
+      const isQuickOccurrence = occurrence.type === 'OUTROS';
+
+      // Se não for admin e não for ocorrência rápida, ignora
+      if (!isAdmin && !isQuickOccurrence) {
+        return;
+      }
+
       const newNotification: Notification = {
         id: occurrence.id,
         title: occurrence.title || 'Nova Ocorrência',
         type: occurrence.type,
         date: new Date(occurrence.timestamp).toLocaleDateString(),
         time: new Date(occurrence.timestamp).toLocaleTimeString(),
-        read: false
+        read: false,
+        isQuick: isQuickOccurrence
       };
 
       setNotifications(prev => {
@@ -92,11 +95,11 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
       
       // Mostra toast
       toast.info('Nova ocorrência registrada!', {
-        description: `${newNotification.title} - ${newNotification.type}`,
+        description: `${newNotification.title} - ${formatOccurrenceType(newNotification.type)}`,
         duration: 5000,
       });
     }
-  }, [lastMessage]);
+  }, [lastMessage, isAdmin]);
 
   const markAsRead = (notificationId: string) => {
     setNotifications(prev =>
@@ -168,7 +171,7 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
                   )}
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {notification.type}
+                  {formatOccurrenceType(notification.type)}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {notification.date} às {notification.time}

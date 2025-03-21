@@ -48,6 +48,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
 import OccurrencesTable from '@/components/OccurrencesTable';
 import authService from '@/services/authService';
+import { formatOccurrenceType } from '@/utils/occurrenceUtils';
 
 const Occurrences: React.FC = () => {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
@@ -166,12 +167,7 @@ const Occurrences: React.FC = () => {
   };
 
   const getOccurrenceTypeText = (type: string) => {
-    switch (type) {
-      case 'homicidio': return 'Homicídio';
-      case 'furto': return 'Furto';
-      case 'roubo': return 'Roubo';
-      default: return 'Outros';
-    }
+    return formatOccurrenceType(type);
   };
 
   const toggleTypeFilter = (type: string) => {

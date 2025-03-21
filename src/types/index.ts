@@ -59,6 +59,7 @@ export interface Occurrence {
   policeStation_id: string | null;
   created_at: string;
   updated_at: string;
+  photos?: string[];
   User?: {
     id: string;
     name: string;

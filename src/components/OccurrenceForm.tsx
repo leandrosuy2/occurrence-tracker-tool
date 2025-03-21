@@ -15,6 +15,44 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import authService from "@/services/authService";
 import { OccurrenceTypeModal, OccurrenceType } from '@/components/OccurrenceTypeModal';
 
+interface ImageWithAuthProps {
+  src: string;
+  alt: string;
+  className?: string;
+}
+
+const ImageWithAuth: React.FC<ImageWithAuthProps> = ({ src, alt, className }) => {
+  const [imageUrl, setImageUrl] = useState<string>('');
+
+  useEffect(() => {
+    const loadImage = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(src, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load image');
+        
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        setImageUrl(objectUrl);
+        
+        return () => URL.revokeObjectURL(objectUrl);
+      } catch (error) {
+        console.error('Error loading image:', error);
+        setImageUrl(''); // Fallback to empty or a placeholder image
+      }
+    };
+
+    loadImage();
+  }, [src]);
+
+  return <img src={imageUrl} alt={alt} className={className} />;
+};
+
 interface OccurrenceFormProps {
   occurrence?: Occurrence;
   onSuccess?: () => void;
@@ -40,6 +78,8 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
   const [gettingLocation, setGettingLocation] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photosPreviews, setPhotosPreviews] = useState<string[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<string[]>(occurrence?.photos || []);
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   
   const isMobile = useIsMobile();
   const isAdmin = authService.isAdmin();
@@ -166,6 +206,13 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
       if (isAdmin && policeStationId) {
         formData.append('policeStation_id', policeStationId);
       }
+      
+      // Append existing photos
+      existingPhotos.forEach(photo => {
+        formData.append('photos', photo);
+      });
+      
+      // Append new photos
       photos.forEach(photo => {
         formData.append('photos', photo);
       });
@@ -347,10 +394,30 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                 </span>
               </Label>
               <div className="flex flex-col items-center space-y-4">
-                {photosPreviews.length > 0 ? (
+                {(existingPhotos.length > 0 || photosPreviews.length > 0) && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
+                    {existingPhotos.map((photo, index) => (
+                      <div key={`existing-${index}`} className="relative">
+                        <ImageWithAuth
+                          src={`https://l2m.tech/api/v1/images/${photo}`}
+                          alt={`Existing ${index + 1}`}
+                          className="w-full h-[200px] object-cover rounded-lg"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2"
+                          onClick={() => {
+                            setExistingPhotos(prev => prev.filter((_, i) => i !== index));
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
                     {photosPreviews.map((preview, index) => (
-                      <div key={index} className="relative">
+                      <div key={`new-${index}`} className="relative">
                         <img
                           src={preview}
                           alt={`Preview ${index + 1}`}
@@ -368,7 +435,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                       </div>
                     ))}
                   </div>
-                ) : null}
+                )}
                 
                 <div className="flex items-center justify-center w-full">
                   <label
@@ -417,6 +484,11 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
           </Button>
         </CardFooter>
       </form>
+      <OccurrenceTypeModal
+        open={isTypeModalOpen}
+        onOpenChange={setIsTypeModalOpen}
+        onSelect={handleTypeSelect}
+      />
     </Card>
   );
 };

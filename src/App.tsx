@@ -26,16 +26,27 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [newOccurrence, setNewOccurrence] = useState<Occurrence | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Verificar se o usuário é admin ao carregar a aplicação
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const user = await authService.getCurrentUser();
+        console.log('Usuário atual:', user);
+        setIsAdmin(user?.role === 'ADMIN');
+      } catch (error) {
+        console.error('Erro ao verificar admin:', error);
+      }
+    };
+    checkAdmin();
+  }, []);
 
   useEffect(() => {
     const handleNewOccurrence = (event: CustomEvent<Occurrence>) => {
       console.log('App - Nova ocorrência recebida:', event.detail);
-      const isAdmin = authService.isAdmin();
-      console.log('App - Usuário é admin:', isAdmin);
-      if (isAdmin) {
-        console.log('App - Atualizando estado com nova ocorrência');
-        setNewOccurrence(event.detail);
-      }
+      console.log('App - Atualizando estado com nova ocorrência');
+      setNewOccurrence(event.detail);
     };
 
     console.log('App - Registrando listener de newOccurrence');
@@ -63,7 +74,8 @@ const App = () => {
 
   useEffect(() => {
     console.log('App - Estado atual da ocorrência:', newOccurrence);
-  }, [newOccurrence]);
+    console.log('App - Usuário é admin:', isAdmin);
+  }, [newOccurrence, isAdmin]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -114,12 +126,14 @@ const App = () => {
         </BrowserRouter>
 
         {/* Modal de Nova Ocorrência */}
-        <NewOccurrenceModal
-          occurrence={newOccurrence}
-          onClose={handleCloseModal}
-          onAccept={handleAcceptOccurrence}
-          onReject={handleRejectOccurrence}
-        />
+        {isAdmin && newOccurrence && (
+          <NewOccurrenceModal
+            occurrence={newOccurrence}
+            onClose={handleCloseModal}
+            onAccept={handleAcceptOccurrence}
+            onReject={handleRejectOccurrence}
+          />
+        )}
       </TooltipProvider>
     </QueryClientProvider>
   );

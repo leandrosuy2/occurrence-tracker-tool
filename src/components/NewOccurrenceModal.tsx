@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Occurrence } from '@/types';
 import { MapPin, AlertCircle, Clock, Info, Navigation, Calendar, Timer, ArrowRight, Map, AlertTriangle } from 'lucide-react';
 import authService from '@/services/authService';
+import { formatOccurrenceType } from '@/utils/occurrenceUtils';
 
 interface NewOccurrenceModalProps {
   occurrence: Occurrence | null;
@@ -64,6 +65,24 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
   const [estimatedTime, setEstimatedTime] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(MAX_RESPONSE_TIME);
   const [isOpen, setIsOpen] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Inicializa o elemento de áudio
+  useEffect(() => {
+    audioRef.current = new Audio('/notification.mp3');
+    audioRef.current.load();
+    // Toca o som quando o modal é aberto
+    if (occurrence) {
+      audioRef.current.play();
+    }
+    return () => {
+      // Limpa o áudio quando o componente é desmontado
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [occurrence]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -121,6 +140,10 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
 
   const handleClose = () => {
     console.log('Modal - Fechando modal');
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     setIsOpen(false);
     onClose();
   };
@@ -128,6 +151,10 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
   const handleAccept = () => {
     if (occurrence) {
       console.log('Modal - Aceitando ocorrência');
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
       onAccept(occurrence);
       handleClose();
     }
@@ -135,6 +162,10 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
 
   const handleReject = () => {
     console.log('Modal - Rejeitando ocorrência');
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     onReject();
     handleClose();
   };
@@ -176,7 +207,7 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
             </div>
             <div>
               <h4 className="font-semibold text-lg">{occurrence.title}</h4>
-              <p className="text-sm text-gray-600">{occurrence.type}</p>
+              <p className="text-sm text-gray-600">{formatOccurrenceType(occurrence.type)}</p>
             </div>
           </div>
 

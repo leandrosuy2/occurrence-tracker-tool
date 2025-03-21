@@ -10,6 +10,7 @@ import { useInterval } from '@/hooks/use-interval';
 import { useIsMobile } from '@/hooks/use-mobile';
 import api, { basePathUrlApiV1 } from '@/services/api';
 import authService from '@/services/authService';
+import { formatOccurrenceType } from '@/utils/occurrenceUtils';
 import {
   BarChart,
   Bar,
@@ -65,11 +66,15 @@ const Dashboard: React.FC = () => {
       return acc;
     }, {});
 
-    const typeData = Object.entries(typeCounts).map(([type, data]) => ({
-      type,
-      count: data.count,
-      recent: data.recent
-    }));
+    const typeData = Object.entries(typeCounts)
+      .map(([type, data]) => ({
+        rawType: type,
+        type: formatOccurrenceType(type),
+        shortType: formatOccurrenceType(type).split(' ').slice(0, 2).join(' ') + (formatOccurrenceType(type).split(' ').length > 2 ? '...' : ''),
+        count: data.count,
+        recent: data.recent
+      }))
+      .sort((a, b) => b.count - a.count); // Ordena por contagem decrescente
 
     // Processa dados mensais
     const monthlyCounts = occurrences.reduce((acc: { [key: string]: number }, occ) => {
@@ -144,6 +149,39 @@ const Dashboard: React.FC = () => {
     fetchMarkers();
   }, []);
 
+  const CustomBarLabel = (props: any) => {
+    const { x, y, width, value } = props;
+    if (isMobile && value < 2) return null; // Não mostra labels pequenos no mobile
+    return (
+      <text x={x + width / 2} y={y - 5} fill="#666" textAnchor="middle" fontSize={isMobile ? 10 : 12}>
+        {value}
+      </text>
+    );
+  };
+
+  const CustomPieLabel = (props: any) => {
+    const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    
+    if (percent < (isMobile ? 0.1 : 0.05)) return null; // Aumenta o limite mínimo no mobile
+    
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        fontSize={isMobile ? 10 : 12}
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -210,38 +248,51 @@ const Dashboard: React.FC = () => {
             <CardHeader>
               <CardTitle>Tipos de Ocorrências</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[400px] w-full">
+            <CardContent className="p-2 sm:p-6">
+              <div className={`h-[${isMobile ? '300px' : '400px'}] w-full`}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={graphData.typeData}>
+                  <BarChart 
+                    data={graphData.typeData}
+                    margin={isMobile ? 
+                      { top: 20, right: 10, left: 0, bottom: 60 } : 
+                      { top: 20, right: 30, left: 20, bottom: 100 }
+                    }
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
-                      dataKey="type" 
+                      dataKey="shortType" 
                       angle={-45}
                       textAnchor="end"
-                      height={80}
+                      height={isMobile ? 80 : 120}
                       interval={0}
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: isMobile ? 9 : 11 }}
                     />
                     <YAxis 
                       yAxisId="left"
                       orientation="left"
                       stroke="#8884d8"
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: isMobile ? 9 : 11 }}
+                      width={isMobile ? 30 : 40}
                     />
                     <YAxis 
                       yAxisId="right"
                       orientation="right"
                       stroke="#82ca9d"
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: isMobile ? 9 : 11 }}
+                      width={isMobile ? 30 : 40}
                     />
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
                         border: '1px solid #ccc',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        padding: '8px',
+                        fontSize: isMobile ? '12px' : '14px'
                       }}
-                      formatter={(value: number) => [`${value} ocorrências`, '']}
+                      formatter={(value: number, name: string, entry: any) => [
+                        `${value} ocorrência${value !== 1 ? 's' : ''}`,
+                        entry.payload.type
+                      ]}
                     />
                     <Bar 
                       yAxisId="left"
@@ -249,6 +300,7 @@ const Dashboard: React.FC = () => {
                       name="Total"
                       fill="#8884d8"
                       radius={[4, 4, 0, 0]}
+                      label={<CustomBarLabel />}
                     />
                     <Bar 
                       yAxisId="right"
@@ -256,6 +308,11 @@ const Dashboard: React.FC = () => {
                       name="Últimos 7 dias"
                       fill="#82ca9d"
                       radius={[4, 4, 0, 0]}
+                    />
+                    <Legend 
+                      verticalAlign="top"
+                      height={36}
+                      wrapperStyle={isMobile ? { fontSize: '10px' } : undefined}
                     />
                   </BarChart>
                 </ResponsiveContainer>
@@ -268,8 +325,8 @@ const Dashboard: React.FC = () => {
             <CardHeader>
               <CardTitle>Distribuição de Ocorrências</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[400px] w-full">
+            <CardContent className="p-2 sm:p-6">
+              <div className={`h-[${isMobile ? '300px' : '400px'}] w-full`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -277,8 +334,8 @@ const Dashboard: React.FC = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={150}
+                      label={CustomPieLabel}
+                      outerRadius={isMobile ? 80 : 130}
                       fill="#8884d8"
                       dataKey="count"
                       nameKey="type"
@@ -294,16 +351,27 @@ const Dashboard: React.FC = () => {
                     </Pie>
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
                         border: '1px solid #ccc',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        padding: '8px',
+                        fontSize: isMobile ? '12px' : '14px'
                       }}
-                      formatter={(value: number) => [`${value} ocorrências`, '']}
+                      formatter={(value: number, name: string, entry: any) => [
+                        `${value} ocorrência${value !== 1 ? 's' : ''}`,
+                        entry.payload.type
+                      ]}
                     />
                     <Legend 
-                      verticalAlign="bottom" 
-                      height={36}
-                      formatter={(value) => value}
+                      layout={isMobile ? "horizontal" : "vertical"}
+                      align={isMobile ? "center" : "right"}
+                      verticalAlign={isMobile ? "bottom" : "middle"}
+                      wrapperStyle={isMobile ? { fontSize: '10px' } : undefined}
+                      formatter={(value, entry: any) => {
+                        const type = entry.payload.type;
+                        const maxLength = isMobile ? 15 : 25;
+                        return type.length > maxLength ? type.substring(0, maxLength) + '...' : type;
+                      }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -316,32 +384,42 @@ const Dashboard: React.FC = () => {
             <CardHeader>
               <CardTitle>Ocorrências por Mês</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[400px] w-full">
+            <CardContent className="p-2 sm:p-6">
+              <div className={`h-[${isMobile ? '300px' : '400px'}] w-full`}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={graphData.monthlyData}>
+                  <LineChart 
+                    data={graphData.monthlyData}
+                    margin={isMobile ? 
+                      { top: 20, right: 10, left: 0, bottom: 20 } : 
+                      { top: 20, right: 30, left: 20, bottom: 30 }
+                    }
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="month"
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                      height={isMobile ? 40 : 60}
                     />
                     <YAxis 
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                      width={isMobile ? 30 : 40}
                     />
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
                         border: '1px solid #ccc',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        padding: '8px',
+                        fontSize: isMobile ? '12px' : '14px'
                       }}
-                      formatter={(value: number) => [`${value} ocorrências`, '']}
+                      formatter={(value: number) => [`${value} ocorrência${value !== 1 ? 's' : ''}`, '']}
                     />
                     <Line 
                       type="monotone" 
                       dataKey="count" 
                       stroke="#8884d8" 
                       strokeWidth={2}
-                      dot={{ r: 4 }}
+                      dot={{ r: isMobile ? 3 : 4 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>

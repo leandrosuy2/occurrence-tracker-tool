@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, MapPin, AlertTriangle, FileText } from 'lucide-react';
+import { Pencil, Trash2, MapPin, AlertTriangle, FileText, Eye, ChevronLeft, ChevronRight, Image, X, Download } from 'lucide-react';
 import { Occurrence } from '@/types';
 import {
   Dialog,
@@ -19,6 +19,8 @@ import {
 import Map from '@/components/Map';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { formatOccurrenceType } from '@/utils/occurrenceUtils';
+import authService from '@/services/authService';
 
 interface OccurrencesTableProps {
   occurrences: Occurrence[];
@@ -28,16 +30,30 @@ interface OccurrencesTableProps {
   isAdmin?: boolean;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   occurrences,
   onUpdate,
   onEdit,
   onDelete,
   isAdmin = false
-}) => {
+}): JSX.Element => {
   const [addresses, setAddresses] = useState<Record<number, string>>({});
   const [selectedOccurrence, setSelectedOccurrence] = useState<Occurrence | null>(null);
   const [isMapOpen, setIsMapOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0);
+
+  const totalPages = Math.ceil(occurrences.length / ITEMS_PER_PAGE);
+  const paginatedOccurrences = occurrences.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const fetchAddress = async (occurrence: Occurrence) => {
     try {
@@ -72,6 +88,11 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   const handleViewLocation = (occurrence: Occurrence) => {
     setSelectedOccurrence(occurrence);
     setIsMapOpen(true);
+  };
+
+  const handleViewDetails = (occurrence: Occurrence) => {
+    setSelectedOccurrence(occurrence);
+    setIsDetailsOpen(true);
   };
 
   const getOccurrenceTypeIcon = (type: string, title: string | null, description: string | null) => {
@@ -116,18 +137,12 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
       case 'OUTROS':
         return <Badge variant="outline" className="bg-gray-100 text-gray-700">Outros</Badge>;
       default: 
-        return <Badge variant="default">{type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}</Badge>;
+        return <Badge variant="default">{formatOccurrenceType(type)}</Badge>;
     }
   };
 
   const getDisplayTitle = (occurrence: Occurrence) => {
-    if (!occurrence.title && !occurrence.description) {
-      return 'Ocorrência rápida';
-    }
-    if (occurrence.type === 'OUTROS') {
-      return 'Ocorrência rápida';
-    }
-    return occurrence.title || occurrence.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    return formatOccurrenceType(occurrence.type);
   };
 
   const adjustTime = (time: string) => {
@@ -151,6 +166,96 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
     });
   };
 
+  const handlePhotoClick = (photo: string) => {
+    if (selectedOccurrence?.photos) {
+      const index = selectedOccurrence.photos.indexOf(photo);
+      setCurrentPhotoIndex(index);
+      setSelectedPhoto(photo);
+      setIsPhotoModalOpen(true);
+    }
+  };
+
+  const handlePreviousPhoto = () => {
+    if (selectedOccurrence?.photos && currentPhotoIndex > 0) {
+      const newIndex = currentPhotoIndex - 1;
+      setCurrentPhotoIndex(newIndex);
+      setSelectedPhoto(selectedOccurrence.photos[newIndex]);
+    }
+  };
+
+  const handleNextPhoto = () => {
+    if (selectedOccurrence?.photos && currentPhotoIndex < selectedOccurrence.photos.length - 1) {
+      const newIndex = currentPhotoIndex + 1;
+      setCurrentPhotoIndex(newIndex);
+      setSelectedPhoto(selectedOccurrence.photos[newIndex]);
+    }
+  };
+
+  const handleDownloadPhoto = async (photoUrl: string) => {
+    try {
+      const response = await fetch(photoUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `foto-${currentPhotoIndex + 1}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading photo:', error);
+    }
+  };
+
+  const getImageUrl = (filename: string) => {
+    return `https://l2m.tech/uploads/${filename}`;
+  };
+
+  const loadImage = async (filename: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No access token available');
+        return;
+      }
+
+      const response = await fetch(getImageUrl(filename), {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load image: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setImageUrls(prev => ({ ...prev, [filename]: url }));
+    } catch (error) {
+      console.error('Error loading image:', error);
+    }
+  };
+
+  useEffect(() => {
+    // Load images for all occurrences
+    occurrences.forEach(occurrence => {
+      if (occurrence.photos) {
+        occurrence.photos.forEach(photo => {
+          if (!imageUrls[photo]) {
+            loadImage(photo);
+          }
+        });
+      }
+    });
+
+    // Cleanup function to revoke object URLs
+    return () => {
+      Object.values(imageUrls).forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [occurrences]);
+
   return (
     <>
       <div className="rounded-md border">
@@ -161,11 +266,12 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
               <TableHead className="w-[300px]">Título</TableHead>
               <TableHead className="w-[120px]">Data</TableHead>
               <TableHead className="w-[100px]">Hora</TableHead>
-              <TableHead className="w-[120px] text-right">Ações</TableHead>
+              <TableHead className="w-[100px]">Fotos</TableHead>
+              <TableHead className="w-[150px] text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {occurrences.map((occurrence) => (
+            {paginatedOccurrences.map((occurrence) => (
               <TableRow key={occurrence.id} className="hover:bg-muted/50">
                 <TableCell>
                   {getOccurrenceTypeBadge(occurrence.type, occurrence.title, occurrence.description)}
@@ -183,7 +289,23 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                 </TableCell>
                 <TableCell>{adjustTime(occurrence.time)}</TableCell>
                 <TableCell>
+                  {occurrence.photos && occurrence.photos.length > 0 && (
+                    <Badge variant="outline" className="bg-purple-100 text-purple-700 cursor-pointer" onClick={() => handleViewDetails(occurrence)}>
+                      <Image className="h-4 w-4 mr-1" />
+                      {occurrence.photos.length}
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell>
                   <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleViewDetails(occurrence)}
+                      className="hover:bg-purple-100 dark:hover:bg-purple-900"
+                    >
+                      <Eye className="h-4 w-4 text-purple-500" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -210,6 +332,32 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="flex items-center justify-between px-2 py-4">
+        <p className="text-sm text-muted-foreground">
+          Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} a {Math.min(currentPage * ITEMS_PER_PAGE, occurrences.length)} de {occurrences.length} ocorrências
+        </p>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Próxima
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
@@ -247,6 +395,239 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-[500px] md:max-w-[600px] lg:max-w-[700px] h-auto max-h-[90vh] overflow-y-auto bg-white p-6">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              {getOccurrenceTypeIcon(selectedOccurrence?.type || '', selectedOccurrence?.title, selectedOccurrence?.description)}
+              <span>Detalhes da Ocorrência</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedOccurrence && (
+            <div className="space-y-6 py-4">
+              {/* Título e Tipo */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <FileText className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-lg">{selectedOccurrence.title || 'Sem título'}</h4>
+                    <div className="mt-1">
+                      {getOccurrenceTypeBadge(selectedOccurrence.type, selectedOccurrence.title, selectedOccurrence.description)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Descrição */}
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-base mb-2">Descrição</h4>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    {selectedOccurrence.description || 'Sem descrição'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Localização */}
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  <MapPin className="h-5 w-5 text-green-500" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-base mb-2">Localização</h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    {addresses[selectedOccurrence.id] || 'Carregando endereço...'}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    onClick={() => {
+                      setIsDetailsOpen(false);
+                      handleViewLocation(selectedOccurrence);
+                    }}
+                  >
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Ver no Mapa
+                  </Button>
+                </div>
+              </div>
+
+              {/* Fotos */}
+              {selectedOccurrence.photos && selectedOccurrence.photos.length > 0 && (
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <Image className="h-5 w-5 text-purple-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-base mb-2">Fotos</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {selectedOccurrence.photos.map((photo, index) => (
+                        <div 
+                          key={index}
+                          className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group"
+                          onClick={() => handlePhotoClick(photo)}
+                        >
+                          {imageUrls[photo] && (
+                            <img
+                              src={imageUrls[photo]}
+                              alt={`Foto ${index + 1}`}
+                              className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
+                            <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Informações Adicionais */}
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  <FileText className="h-5 w-5 text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-base mb-2">Informações Adicionais</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Data:</span>
+                      <span>{adjustDate(selectedOccurrence.date)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Hora:</span>
+                      <span>{adjustTime(selectedOccurrence.time)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Registrado por:</span>
+                      <span>{selectedOccurrence.User?.name || 'Usuário não identificado'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Status:</span>
+                      <Badge variant={selectedOccurrence.resolved ? "success" : "secondary"}>
+                        {selectedOccurrence.resolved ? 'Resolvido' : 'Em aberto'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPhotoModalOpen} onOpenChange={setIsPhotoModalOpen}>
+        <DialogContent className="max-w-[90vw] md:max-w-[80vw] lg:max-w-[1000px] h-[85vh] bg-black border-0 p-0">
+          {/* Barra superior */}
+          <div className="absolute top-0 left-0 right-0 z-20 flex justify-between items-center px-6 py-4 bg-gradient-to-b from-black via-black/50 to-transparent">
+            <div className="text-white">
+              <h3 className="text-lg font-medium">
+                {selectedOccurrence?.title || formatOccurrenceType(selectedOccurrence?.type || '')}
+              </h3>
+              <p className="text-sm opacity-75">
+                Foto {currentPhotoIndex + 1} de {selectedOccurrence?.photos?.length || 0}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {selectedPhoto && imageUrls[selectedPhoto] && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:bg-white/20 text-white rounded-full transition-all duration-200"
+                  onClick={() => handleDownloadPhoto(imageUrls[selectedPhoto])}
+                >
+                  <Download className="h-5 w-5" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:bg-white/20 text-white rounded-full transition-all duration-200"
+                onClick={() => setIsPhotoModalOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Container da imagem */}
+          <div className="relative w-full h-full flex items-center justify-center px-12">
+            {selectedPhoto && imageUrls[selectedPhoto] && (
+              <img
+                src={imageUrls[selectedPhoto]}
+                alt="Visualização da foto"
+                className="max-w-full max-h-[calc(85vh-160px)] object-contain"
+              />
+            )}
+
+            {/* Botões de navegação */}
+            {selectedOccurrence?.photos && selectedOccurrence.photos.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 hover:bg-white/20 text-white rounded-full w-10 h-10 transition-all duration-200"
+                  onClick={handlePreviousPhoto}
+                  disabled={currentPhotoIndex === 0}
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-white/20 text-white rounded-full w-10 h-10 transition-all duration-200"
+                  onClick={handleNextPhoto}
+                  disabled={currentPhotoIndex === selectedOccurrence.photos.length - 1}
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Miniaturas */}
+          {selectedOccurrence?.photos && selectedOccurrence.photos.length > 1 && (
+            <div className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-black via-black/50 to-transparent">
+              <div className="flex justify-center gap-2 overflow-x-auto py-2">
+                {selectedOccurrence.photos.map((photo, index) => (
+                  imageUrls[photo] && (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        setCurrentPhotoIndex(index);
+                        setSelectedPhoto(photo);
+                      }}
+                      className={cn(
+                        "w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200 ring-offset-0",
+                        "hover:ring-2 hover:ring-white hover:ring-offset-0",
+                        currentPhotoIndex === index 
+                          ? "ring-2 ring-white opacity-100" 
+                          : "opacity-50 hover:opacity-75"
+                      )}
+                    >
+                      <img
+                        src={imageUrls[photo]}
+                        alt={`Miniatura ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  )
+                ))}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

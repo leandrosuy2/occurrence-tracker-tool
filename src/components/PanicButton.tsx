@@ -14,6 +14,7 @@ import {
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import OccurrenceTypeModal, { OccurrenceType } from './OccurrenceTypeModal';
+import { formatOccurrenceType } from '@/utils/occurrenceUtils';
 
 const PanicButton: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -115,7 +116,7 @@ const PanicButton: React.FC = () => {
                   className="w-full flex items-center gap-2"
                 >
                   {selectedType ? (
-                    <span>{selectedType}</span>
+                    <span>{formatOccurrenceType(selectedType)}</span>
                   ) : (
                     <>
                       <AlertTriangle className="h-4 w-4" />
