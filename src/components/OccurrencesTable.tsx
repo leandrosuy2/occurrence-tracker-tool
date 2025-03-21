@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import Map from '@/components/Map';
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface OccurrencesTableProps {
   occurrences: Occurrence[];
@@ -27,8 +28,8 @@ interface OccurrencesTableProps {
   isAdmin?: boolean;
 }
 
-const OccurrencesTable: React.FC<OccurrencesTableProps> = ({ 
-  occurrences, 
+const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
+  occurrences,
   onUpdate,
   onEdit,
   onDelete,
@@ -44,7 +45,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${occurrence.latitude}&lon=${occurrence.longitude}&zoom=18&addressdetails=1&accept-language=pt-BR`
       );
       const data = await response.json();
-      
+
       if (data.display_name) {
         setAddresses(prev => ({
           ...prev,
@@ -73,30 +74,81 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
     setIsMapOpen(true);
   };
 
-  const getOccurrenceTypeIcon = (type: string) => {
+  const getOccurrenceTypeIcon = (type: string, title: string | null, description: string | null) => {
+    if (!title && !description) {
+      return <FileText className="h-4 w-4 text-green-500" />;
+    }
+    if (title && description) {
+      return <FileText className="h-4 w-4 text-blue-500" />;
+    }
+
     switch (type) {
-      case 'homicidio': 
+      case 'ROUBOS_E_FURTOS': 
         return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case 'furto': 
-        return <FileText className="h-4 w-4 text-yellow-500" />;
-      case 'roubo': 
+      case 'VIOLENCIA_DOMESTICA':
+      case 'MARIA_DA_PENHA':
         return <FileText className="h-4 w-4 text-orange-500" />;
+      case 'POSSE_DE_ARMAS_BRANCAS_OU_DE_FOGO':
+        return <FileText className="h-4 w-4 text-yellow-500" />;
+      case 'OUTROS':
+        return <FileText className="h-4 w-4 text-gray-500" />;
       default: 
         return <FileText className="h-4 w-4 text-blue-500" />;
     }
   };
 
-  const getOccurrenceTypeBadge = (type: string) => {
-    switch (type) {
-      case 'homicidio': 
-        return <Badge variant="destructive">Homicídio</Badge>;
-      case 'furto': 
-        return <Badge variant="secondary">Furto</Badge>;
-      case 'roubo': 
-        return <Badge variant="secondary">Roubo</Badge>;
-      default: 
-        return <Badge variant="default">Outros</Badge>;
+  const getOccurrenceTypeBadge = (type: string, title: string | null, description: string | null) => {
+    if (!title && !description) {
+      return <Badge variant="outline" className="bg-green-100 text-green-700">Ocorrência rápida</Badge>;
     }
+    if (title && description) {
+      return <Badge variant="outline" className="bg-blue-100 text-blue-700">Ocorrência detalhada</Badge>;
+    }
+
+    switch (type) {
+      case 'ROUBOS_E_FURTOS': 
+        return <Badge variant="destructive">Roubos e Furtos</Badge>;
+      case 'VIOLENCIA_DOMESTICA':
+      case 'MARIA_DA_PENHA':
+        return <Badge variant="secondary" className="bg-orange-100 text-orange-700">Violência Doméstica</Badge>;
+      case 'POSSE_DE_ARMAS_BRANCAS_OU_DE_FOGO':
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">Posse de Armas</Badge>;
+      case 'OUTROS':
+        return <Badge variant="outline" className="bg-gray-100 text-gray-700">Outros</Badge>;
+      default: 
+        return <Badge variant="default">{type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}</Badge>;
+    }
+  };
+
+  const getDisplayTitle = (occurrence: Occurrence) => {
+    if (!occurrence.title && !occurrence.description) {
+      return 'Ocorrência rápida';
+    }
+    if (occurrence.type === 'OUTROS') {
+      return 'Ocorrência rápida';
+    }
+    return occurrence.title || occurrence.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const adjustTime = (time: string) => {
+    const [hours, minutes, seconds] = time.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours - 3, minutes, seconds);
+    return date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+
+  const adjustDate = (dateString: string) => {
+    const date = new Date(dateString);
+    date.setDate(date.getDate() + 1);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
   return (
@@ -105,8 +157,8 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="w-[300px]">Título</TableHead>
               <TableHead className="w-[150px]">Tipo</TableHead>
+              <TableHead className="w-[300px]">Título</TableHead>
               <TableHead className="w-[120px]">Data</TableHead>
               <TableHead className="w-[100px]">Hora</TableHead>
               <TableHead className="w-[120px] text-right">Ações</TableHead>
@@ -115,23 +167,21 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
           <TableBody>
             {occurrences.map((occurrence) => (
               <TableRow key={occurrence.id} className="hover:bg-muted/50">
+                <TableCell>
+                  {getOccurrenceTypeBadge(occurrence.type, occurrence.title, occurrence.description)}
+                </TableCell>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
-                    {getOccurrenceTypeIcon(occurrence.type)}
-                    <span>{occurrence.title || 'Sem título'}</span>
+                    {getOccurrenceTypeIcon(occurrence.type, occurrence.title, occurrence.description)}
+                    <span className={cn(
+                      (!occurrence.title && !occurrence.description) && "text-green-700"
+                    )}>{getDisplayTitle(occurrence)}</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  {getOccurrenceTypeBadge(occurrence.type)}
+                  {adjustDate(occurrence.date)}
                 </TableCell>
-                <TableCell>
-                  {new Date(occurrence.date).toLocaleDateString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                  })}
-                </TableCell>
-                <TableCell>{occurrence.time}</TableCell>
+                <TableCell>{adjustTime(occurrence.time)}</TableCell>
                 <TableCell>
                   <div className="flex justify-end space-x-2">
                     <Button
@@ -152,14 +202,6 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                         >
                           <Pencil className="h-4 w-4 text-yellow-500" />
                         </Button>
-                        {/* <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDelete(occurrence.id.toString())}
-                          className="hover:bg-red-100 dark:hover:bg-red-900"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button> */}
                       </>
                     )}
                   </div>
@@ -174,7 +216,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {getOccurrenceTypeIcon(selectedOccurrence?.type || '')}
+              {getOccurrenceTypeIcon(selectedOccurrence?.type || '', selectedOccurrence?.title, selectedOccurrence?.description)}
               <span>{selectedOccurrence?.title || 'Localização da Ocorrência'}</span>
             </DialogTitle>
           </DialogHeader>
@@ -187,14 +229,14 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                 </p>
               </div>
               <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                <span>Data: {new Date(selectedOccurrence?.date || '').toLocaleDateString('pt-BR')}</span>
+                <span>Data: {adjustDate(selectedOccurrence?.date || '')}</span>
                 <span>Hora: {selectedOccurrence?.time}</span>
-                <span>Tipo: {getOccurrenceTypeBadge(selectedOccurrence?.type || '')}</span>
+                <span>Tipo: {getOccurrenceTypeBadge(selectedOccurrence?.type || '', selectedOccurrence?.title, selectedOccurrence?.description)}</span>
               </div>
             </div>
             {selectedOccurrence && (
               <div className="h-[500px]">
-                <Map 
+                <Map
                   occurrences={[selectedOccurrence]}
                   policeStations={[]}
                   center={[selectedOccurrence.longitude, selectedOccurrence.latitude]}

@@ -13,6 +13,7 @@ import { Occurrence, PoliceStation } from "@/types";
 import { AlertCircle, Loader2, ImagePlus, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import authService from "@/services/authService";
+import { OccurrenceTypeModal, OccurrenceType } from '@/components/OccurrenceTypeModal';
 
 interface OccurrenceFormProps {
   occurrence?: Occurrence;
@@ -51,7 +52,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
         
         // If there's no pre-selected station and we have stations available, select the first one
         if (!policeStationId && stations.length > 0) {
-          setPoliceStationId(stations[0].id);
+          setPoliceStationId(String(stations[0].id));
         }
       } catch (error) {
         console.error('Error fetching police stations:', error);
@@ -135,6 +136,14 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
     });
   };
 
+  const handleTypeSelect = (type: OccurrenceType) => {
+    setType(type);
+    if (type === 'OUTROS') {
+      setTitle('Ocorrência rápida' as string);
+      setDescription('Ocorrência rápida' as string);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -203,26 +212,26 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
               <Label htmlFor="type">Tipo de Ocorrência</Label>
               <Select
                 value={type}
-                onValueChange={(value) => setType(value)}
+                onValueChange={(value) => handleTypeSelect(value as OccurrenceType)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent position={isMobile ? "popper" : "item-aligned"}>
-                  <SelectItem value="Agressões ou brigas">Agressões ou brigas</SelectItem>
-                  <SelectItem value="Apoio em acidentes de trânsito">Apoio em acidentes de trânsito</SelectItem>
-                  <SelectItem value="Depredação do patrimônio público">Depredação do patrimônio público</SelectItem>
-                  <SelectItem value="Emergências ambientais">Emergências ambientais</SelectItem>
-                  <SelectItem value="Invasão de prédios ou terrenos públicos">Invasão de prédios ou terrenos públicos</SelectItem>
-                  <SelectItem value="Maria da Penha">Maria da Penha</SelectItem>
-                  <SelectItem value="Perturbação do sossego público">Perturbação do sossego público</SelectItem>
-                  <SelectItem value="Posse de armas brancas ou de fogo">Posse de armas brancas ou de fogo</SelectItem>
-                  <SelectItem value="Pessoa suspeita">Pessoa suspeita</SelectItem>
-                  <SelectItem value="ROUBO">Roubos e furtos</SelectItem>
-                  <SelectItem value="Tentativa de suicídio">Tentativa de suicídio</SelectItem>
-                  <SelectItem value="Uso e tráfico de drogas">Uso e tráfico de drogas</SelectItem>
-                  <SelectItem value="Violência doméstica">Violência doméstica</SelectItem>
-                  <SelectItem value="Outros">Outros</SelectItem>
+                  <SelectItem value="AGRESSOES_OU_BRIGAS">Agressões ou brigas</SelectItem>
+                  <SelectItem value="APOIO_EM_ACIDENTES_DE_TRANSITO">Apoio em acidentes de trânsito</SelectItem>
+                  <SelectItem value="DEPREDACAO_DO_PATRIMONIO_PUBLICO">Depredação do patrimônio público</SelectItem>
+                  <SelectItem value="EMERGENCIAS_AMBIENTAIS">Emergências ambientais</SelectItem>
+                  <SelectItem value="INVASAO_DE_PREDIOS_OU_TERRENOS_PUBLICOS">Invasão de prédios ou terrenos públicos</SelectItem>
+                  <SelectItem value="MARIA_DA_PENHA">Maria da Penha</SelectItem>
+                  <SelectItem value="PERTURBACAO_DO_SOSSEGO_PUBLICO">Perturbação do sossego público</SelectItem>
+                  <SelectItem value="POSSE_DE_ARMAS_BRANCAS_OU_DE_FOGO">Posse de armas brancas ou de fogo</SelectItem>
+                  <SelectItem value="PESSOA_SUSPEITA">Pessoa suspeita</SelectItem>
+                  <SelectItem value="ROUBOS_E_FURTOS">Roubos e furtos</SelectItem>
+                  <SelectItem value="TENTATIVA_DE_SUICIDIO">Tentativa de suicídio</SelectItem>
+                  <SelectItem value="USO_E_TRAFICO_DE_DROGAS">Uso e tráfico de drogas</SelectItem>
+                  <SelectItem value="VIOLENCIA_DOMESTICA">Violência doméstica</SelectItem>
+                  <SelectItem value="OUTROS">Outros</SelectItem>
                 </SelectContent>
               </Select>
             </div>

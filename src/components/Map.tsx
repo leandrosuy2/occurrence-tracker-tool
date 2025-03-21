@@ -64,14 +64,14 @@ const CustomIcon: React.FC<{ type: string; isCurrentLocation?: boolean }> = ({ t
 
   return (
     <div className="relative">
-      <div 
+      <div
         className="absolute -translate-x-1/2 -translate-y-1/2"
         style={{ color: getIconColor() }}
       >
         {getIcon()}
       </div>
       {!isCurrentLocation && (
-        <div 
+        <div
           className="absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full opacity-20"
           style={{ backgroundColor: getIconColor() }}
         />
@@ -81,9 +81,9 @@ const CustomIcon: React.FC<{ type: string; isCurrentLocation?: boolean }> = ({ t
 };
 
 // Componente para lidar com eventos do mapa
-const MapEvents: React.FC<{ onLocationSelect?: (lat: number, lng: number) => void; selectionMode?: boolean }> = ({ 
-  onLocationSelect, 
-  selectionMode 
+const MapEvents: React.FC<{ onLocationSelect?: (lat: number, lng: number) => void; selectionMode?: boolean }> = ({
+  onLocationSelect,
+  selectionMode
 }) => {
   useMapEvents({
     click: (e) => {
@@ -108,24 +108,53 @@ const Map: React.FC<MapProps> = ({
   const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [currentAddress, setCurrentAddress] = useState<string>('');
   const mapRef = useRef<L.Map>(null);
 
-  const getCurrentLocation = () => {
+  // Função para converter coordenadas em endereço
+  const getAddressFromCoordinates = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=pt-BR`,
+        {
+          headers: {
+            'User-Agent': 'OccurrenceTracker/1.0',
+            'Accept-Language': 'pt-BR'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.display_name || 'Endereço não encontrado';
+    } catch (error) {
+      console.error('Erro ao buscar endereço:', error);
+      return 'Erro ao buscar endereço';
+    }
+  };
+
+  const getCurrentLocation = async () => {
     if (!navigator.geolocation) {
       console.error('Geolocation is not supported by your browser');
       return;
     }
 
     setLoadingLocation(true);
-    
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        // console.log('Location obtained:', position.coords);
+      async (position) => {
         const newLocation: [number, number] = [position.coords.latitude, position.coords.longitude];
         setCurrentLocation(newLocation);
+
+        // Busca o endereço quando obtém a localização
+        const address = await getAddressFromCoordinates(position.coords.latitude, position.coords.longitude);
+        setCurrentAddress(address);
+
         if (mapRef.current) {
           mapRef.current.setView(newLocation, zoom);
-          // Força uma atualização do mapa
           mapRef.current.invalidateSize();
         }
         setLoadingLocation(false);
@@ -165,6 +194,7 @@ const Map: React.FC<MapProps> = ({
     }
   }, [currentLocation, zoom]);
 
+  // Restaurar o useEffect para fazer a requisição automática
   useEffect(() => {
     if (getUserLocation && mapReady) {
       getCurrentLocation();
@@ -215,13 +245,14 @@ const Map: React.FC<MapProps> = ({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        
+
         {/* Marcador de localização atual */}
         {currentLocation && (
           <Marker position={currentLocation}>
             <Popup>
               <div className="text-center">
                 <p className="font-medium">Sua localização atual</p>
+                <p className="text-sm text-gray-600 mt-1">{currentAddress}</p>
               </div>
             </Popup>
           </Marker>
@@ -236,25 +267,22 @@ const Map: React.FC<MapProps> = ({
               icon={L.divIcon({
                 className: 'custom-marker',
                 html: `<div class="relative">
-                  <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: ${
-                    occurrence.type === 'homicidio' ? '#ef4444' :
+                  <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: ${occurrence.type === 'homicidio' ? '#ef4444' :
                     occurrence.type === 'furto' ? '#f59e0b' :
-                    occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                      occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
                   }">
                     ${occurrence.type === 'homicidio' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' :
                     occurrence.type === 'furto' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>' :
-                    occurrence.type === 'roubo' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' :
-                    '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+                      occurrence.type === 'roubo' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' :
+                        '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
                   }</div>
-                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: ${
-                    occurrence.type === 'homicidio' ? '#ef4444' :
+                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: ${occurrence.type === 'homicidio' ? '#ef4444' :
                     occurrence.type === 'furto' ? '#f59e0b' :
-                    occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                      occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
                   }"></div>
-                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: ${
-                    occurrence.type === 'homicidio' ? '#ef4444' :
+                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: ${occurrence.type === 'homicidio' ? '#ef4444' :
                     occurrence.type === 'furto' ? '#f59e0b' :
-                    occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                      occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
                   }"></div>
                 </div>`,
                 iconSize: [32, 32],
@@ -266,21 +294,20 @@ const Map: React.FC<MapProps> = ({
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-3 h-3 rounded-full" style={{
                       backgroundColor: occurrence.type === 'homicidio' ? '#ef4444' :
-                      occurrence.type === 'furto' ? '#f59e0b' :
-                      occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
+                        occurrence.type === 'furto' ? '#f59e0b' :
+                          occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
                     }}></div>
                     <div>
                       <h3 className="font-semibold text-lg">{occurrence.title || 'Sem título'}</h3>
-                      <span className={`text-sm font-medium ${
-                        occurrence.type === 'homicidio' ? 'text-red-600' :
-                        occurrence.type === 'furto' ? 'text-yellow-600' :
-                        occurrence.type === 'roubo' ? 'text-orange-600' : 'text-blue-600'
-                      }`}>
+                      <span className={`text-sm font-medium ${occurrence.type === 'homicidio' ? 'text-red-600' :
+                          occurrence.type === 'furto' ? 'text-yellow-600' :
+                            occurrence.type === 'roubo' ? 'text-orange-600' : 'text-blue-600'
+                        }`}>
                         {occurrence.type.charAt(0).toUpperCase() + occurrence.type.slice(1)}
                       </span>
                     </div>
                   </div>
-                  
+
                   {occurrence.description && (
                     <div className="bg-gray-50 rounded-lg p-3 mb-3">
                       <p className="text-sm text-gray-600">{occurrence.description}</p>
@@ -294,14 +321,13 @@ const Map: React.FC<MapProps> = ({
                         {new Date(occurrence.date).toLocaleDateString('pt-BR')} às {occurrence.time}
                       </span>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500">Status:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        occurrence.resolved 
-                          ? 'bg-green-100 text-green-800' 
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${occurrence.resolved
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
-                      }`}>
+                        }`}>
                         {occurrence.resolved ? 'Resolvido' : 'Não resolvido'}
                       </span>
                     </div>
@@ -332,13 +358,66 @@ const Map: React.FC<MapProps> = ({
             <Marker
               key={station.id}
               position={[station.latitude, station.longitude]}
+              icon={L.divIcon({
+                className: 'custom-marker',
+                html: `<div class="relative">
+                  <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: #1e40af">
+                    <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                      <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                      <path d="M12 9v6M9 12h6"/>
+                    </svg>
+                  </div>
+                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: #1e40af"></div>
+                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: #1e40af"></div>
+                </div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+              })}
             >
               <Popup>
-                <div className="p-2">
-                  <h3 className="font-medium mb-1">{station.name}</h3>
-                  <p className="text-sm text-gray-600">{station.address}</p>
-                  <div className="mt-2 text-xs text-gray-500">
-                    <p>Telefone: {station.phone}</p>
+                <div className="p-4 min-w-[300px]">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-3 h-3 rounded-full bg-blue-800"></div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{station.name}</h3>
+                      <span className="text-sm font-medium text-blue-800">Delegacia de Polícia</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 rounded-lg p-3 mb-3">
+                    <p className="text-sm text-blue-800">{station.address}</p>
+                  </div>
+
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Telefone:</span>
+                      <span className="font-medium text-blue-800">{station.phone}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Horário de Atendimento:</span>
+                      <span className="font-medium text-blue-800">24 horas</span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Distrito:</span>
+                      <span className="font-medium text-blue-800">{station.district || 'Não informado'}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Região:</span>
+                      <span className="font-medium text-blue-800">{station.region || 'Não informado'}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-gray-200">
+                    <div className="flex items-center gap-2 text-sm text-blue-800">
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                      <span>Local seguro para registro de ocorrências</span>
+                    </div>
                   </div>
                 </div>
               </Popup>
