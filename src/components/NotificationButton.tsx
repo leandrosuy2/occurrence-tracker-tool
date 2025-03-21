@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Bell } from "lucide-react";
 import {
@@ -28,12 +28,38 @@ interface NotificationButtonProps {
 const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const { lastMessage } = useWebSocket();
 
-  // Som de alerta
-  const playAlertSound = () => {
-    const audio = new Audio('/notification.mp3');
-    audio.play().catch(error => console.log('Erro ao tocar som:', error));
+  // Inicializa o elemento de áudio
+  useEffect(() => {
+    audioRef.current = new Audio('/notification.mp3');
+    audioRef.current.load();
+  }, []);
+
+  // Função para tocar o som de alerta
+  const playAlertSound = async () => {
+    if (!audioRef.current) return;
+
+    try {
+      // Se o usuário ainda não interagiu, tenta reproduzir com userGesture
+      if (!hasUserInteracted) {
+        await audioRef.current.play();
+      } else {
+        // Se já houve interação, reproduz normalmente
+        audioRef.current.currentTime = 0;
+        await audioRef.current.play();
+      }
+    } catch (error) {
+      console.log('Erro ao tocar som:', error);
+      // Não mostra erro para o usuário, apenas registra no console
+    }
+  };
+
+  // Marca interação do usuário quando o dropdown é aberto
+  const handleDropdownOpen = () => {
+    setHasUserInteracted(true);
   };
 
   // Efeito para processar mensagens do WebSocket
@@ -91,7 +117,7 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={handleDropdownOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="icon" className="relative">
           <Bell className="h-4 w-4" />

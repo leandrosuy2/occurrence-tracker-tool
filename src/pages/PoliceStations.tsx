@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, MapPin } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Search } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -92,6 +92,9 @@ const PoliceStations = () => {
   const isMobile = useIsMobile();
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<PoliceStation | null>(null);
+  const [cep, setCep] = useState('');
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
+  const [map, setMap] = useState<L.Map | null>(null);
 
   const {
     register,
@@ -217,6 +220,87 @@ const PoliceStations = () => {
     setIsAddressModalOpen(true);
   };
 
+  // Função para buscar CEP
+  const handleSearchCep = async () => {
+    // Remove o hífen e verifica se tem 8 dígitos
+    const cepNumbers = cep.replace(/\D/g, '');
+    if (!cepNumbers || cepNumbers.length !== 8) {
+      toast.error('Digite um CEP válido');
+      return;
+    }
+
+    setIsLoadingCep(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepNumbers}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        toast.error('CEP não encontrado');
+        return;
+      }
+
+      // Busca as coordenadas usando a API de geocoding do OpenStreetMap
+      const geocodeResponse = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${data.logradouro},${data.bairro},${data.localidade},${data.uf},Brasil`
+      );
+      const geocodeData = await geocodeResponse.json();
+
+      if (geocodeData && geocodeData[0]) {
+        const { lat, lon } = geocodeData[0];
+        setValue('latitude', parseFloat(lat));
+        setValue('longitude', parseFloat(lon));
+        
+        // Centraliza o mapa na localização
+        if (map) {
+          map.setView([parseFloat(lat), parseFloat(lon)], 15);
+        }
+
+        toast.success('Localização encontrada!');
+      } else {
+        toast.error('Não foi possível encontrar as coordenadas para este CEP');
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      toast.error('Erro ao buscar CEP');
+    } finally {
+      setIsLoadingCep(false);
+    }
+  };
+
+  // Função para formatar o telefone
+  const formatPhoneNumber = (value: string) => {
+    // Remove todos os caracteres não numéricos
+    const numbers = value.replace(/\D/g, '');
+    
+    // Aplica a máscara (XX) XXXXX-XXXX
+    if (numbers.length <= 2) {
+      return numbers;
+    } else if (numbers.length <= 7) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    } else if (numbers.length <= 11) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+    }
+    
+    // Limita a 11 dígitos
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
+
+  // Função para formatar o CEP
+  const formatCep = (value: string) => {
+    // Remove todos os caracteres não numéricos
+    const numbers = value.replace(/\D/g, '');
+    
+    // Aplica a máscara XXXXX-XXX
+    if (numbers.length <= 5) {
+      return numbers;
+    } else if (numbers.length <= 8) {
+      return `${numbers.slice(0, 5)}-${numbers.slice(5)}`;
+    }
+    
+    // Limita a 8 dígitos
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -269,7 +353,13 @@ const PoliceStations = () => {
                   <Label htmlFor="phone">Telefone</Label>
                   <Input
                     id="phone"
-                    {...register('phone')}
+                    placeholder="(XX) XXXXX-XXXX"
+                    {...register('phone', {
+                      onChange: (e) => {
+                        const formatted = formatPhoneNumber(e.target.value);
+                        e.target.value = formatted;
+                      }
+                    })}
                   />
                   {errors.phone && (
                     <p className="text-sm text-red-500">{errors.phone.message}</p>
@@ -278,11 +368,34 @@ const PoliceStations = () => {
               </div>
               <div>
                 <Label>Localização</Label>
+                <div className="flex gap-2 mb-2">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="XXXXX-XXX"
+                      value={cep}
+                      onChange={(e) => {
+                        const formatted = formatCep(e.target.value);
+                        setCep(formatted);
+                      }}
+                      maxLength={9}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSearchCep}
+                    disabled={isLoadingCep || cep.replace(/\D/g, '').length !== 8}
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    {isLoadingCep ? 'Buscando...' : 'Buscar CEP'}
+                  </Button>
+                </div>
                 <div className="h-[400px] w-full rounded-md border">
                   <MapContainer
                     center={editingStation ? [editingStation.latitude, editingStation.longitude] : [center.lat, center.lng]}
                     zoom={13}
                     style={{ height: '100%', width: '100%' }}
+                    ref={setMap}
                   >
                     <TileLayer
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
