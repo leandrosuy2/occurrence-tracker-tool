@@ -55,6 +55,7 @@ export interface Occurrence {
   date: string;
   time: string;
   resolved: boolean;
+  status: 'accepted' | 'rejected' | null;
   user_id: string;
   policeStation_id: string | null;
   created_at: string;

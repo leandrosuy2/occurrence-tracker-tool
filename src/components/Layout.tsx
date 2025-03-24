@@ -25,19 +25,30 @@ const Layout: React.FC = () => {
       {!isMobile && <Sidebar className="hidden md:block" />}
       
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <header className="bg-white border-b h-16 flex items-center justify-between px-6 shadow-sm">
+        <header className="bg-ocorrencia-azul-escuro h-16 flex items-center justify-between px-6 shadow-sm">
           <div className="flex items-center gap-4">
             {isMobile && (
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0">
-                  <Sidebar className="w-full border-none" />
-                </SheetContent>
-              </Sheet>
+              <>
+                {isAdmin ? (
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-white hover:text-white hover:bg-ocorrencia-azul-medio">
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="p-0">
+                      <Sidebar className="w-full border-none" />
+                    </SheetContent>
+                  </Sheet>
+                ) : (
+                  <img 
+                    src="/logo.png" 
+                    alt="Logo Vigilantes" 
+                    className="h-8 w-auto cursor-pointer"
+                    onClick={() => navigate('/')}
+                  />
+                )}
+              </>
             )}
           </div>
           
@@ -46,7 +57,7 @@ const Layout: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-white hover:text-white hover:bg-ocorrencia-azul-medio"
               onClick={() => navigate('/profile')}
             >
               <User className="h-4 w-4" />
@@ -56,7 +67,7 @@ const Layout: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-white hover:text-white hover:bg-ocorrencia-azul-medio"
               onClick={handleLogout}
             >
               <LogOut className="h-4 w-4" />

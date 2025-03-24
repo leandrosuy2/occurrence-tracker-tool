@@ -271,7 +271,6 @@ const Profile: React.FC = () => {
           <TabsTrigger value="profile">Perfil</TabsTrigger>
           {/* <TabsTrigger value="password">Senha</TabsTrigger>
           <TabsTrigger value="email">E-mail</TabsTrigger> */}
-          <TabsTrigger value="danger">Conta</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -395,6 +394,21 @@ const Profile: React.FC = () => {
                     />
                   </div>
 
+                  <div className="border rounded-md p-4 bg-red-50">
+                    <h3 className="font-medium text-ocorrencia-vermelho">Excluir Conta</h3>
+                    <p className="text-sm text-gray-500 mt-2 mb-4">
+                      Uma vez excluída, todos os seus dados serão permanentemente removidos.
+                      Esta ação não pode ser desfeita.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleDeleteAccount}
+                    >
+                      Excluir minha conta
+                    </Button>
+                  </div>
+
                   <Button type="submit" className="bg-ocorrencia-azul-escuro hover:bg-ocorrencia-azul-medio">
                     Salvar Alterações
                   </Button>
@@ -505,34 +519,6 @@ const Profile: React.FC = () => {
                   Alterar E-mail
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="danger">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-ocorrencia-vermelho">Zona de Perigo</CardTitle>
-              <CardDescription>
-                Operações irreversíveis relacionadas à sua conta
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="border rounded-md p-4 bg-red-50">
-                  <h3 className="font-medium text-ocorrencia-vermelho">Excluir Conta</h3>
-                  <p className="text-sm text-gray-500 mt-2 mb-4">
-                    Uma vez excluída, todos os seus dados serão permanentemente removidos.
-                    Esta ação não pode ser desfeita.
-                  </p>
-                  <Button
-                    variant="destructive"
-                    onClick={handleDeleteAccount}
-                  >
-                    Excluir minha conta
-                  </Button>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

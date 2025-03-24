@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Map from '@/components/Map';
-import { MapPin, FileText, Users, Shield } from 'lucide-react';
+import { MapPin, FileText, Users, Shield, Plus, List } from 'lucide-react';
 import occurrenceService from '@/services/occurrenceService';
 import policeStationService from '@/services/policeStationService';
 import { Occurrence, PoliceStation } from '@/types';
@@ -11,6 +11,10 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import api, { basePathUrlApiV1 } from '@/services/api';
 import authService from '@/services/authService';
 import { formatOccurrenceType } from '@/utils/occurrenceUtils';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import OccurrenceForm from '@/components/OccurrenceForm';
 import {
   BarChart,
   Bar,
@@ -42,9 +46,11 @@ const Dashboard: React.FC = () => {
     typeData: [],
     monthlyData: []
   });
+  const [isNewOccurrenceModalOpen, setIsNewOccurrenceModalOpen] = useState(false);
   
   const isMobile = useIsMobile();
   const isAdmin = authService.isAdmin();
+  const navigate = useNavigate();
 
   const processGraphData = (occurrences: Occurrence[]) => {
     // Processa dados por tipo de ocorrência
@@ -185,12 +191,52 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold">BEM VINDO</h1>
         <p className="text-muted-foreground">
-          Bem-vindo ao Sistema de Registro de Ocorrências
+          {isAdmin 
+            ? "ESSE É O SEU PAINEL DE CONTROLE DE OCORRENCIAS"
+            : "Faça sua ocorrência detalhada clicando no botão abaixo, ou uma ocorrência rápida clicando em SOS."
+          }
         </p>
       </div>
       
+      {/* Botões de Ação para Usuários Não-Admin */}
+      {!isAdmin && (
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button 
+            className="flex-1 bg-ocorrencia-azul-escuro hover:bg-ocorrencia-azul-medio text-white"
+            onClick={() => setIsNewOccurrenceModalOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Faça sua ocorrência detalhada
+          </Button>
+          
+          <Button 
+            variant="outline"
+            className="flex-1"
+            onClick={() => navigate('/ocorrencias?filter=my')}
+          >
+            <List className="mr-2 h-4 w-4" />
+            Minhas Ocorrências
+          </Button>
+        </div>
+      )}
+      
+      {/* Modal de Nova Ocorrência - Apenas para usuários não-admin */}
+      {!isAdmin && (
+        <Dialog open={isNewOccurrenceModalOpen} onOpenChange={setIsNewOccurrenceModalOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <OccurrenceForm 
+              onSuccess={() => {
+                setIsNewOccurrenceModalOpen(false);
+                fetchData(); // Recarrega os dados do dashboard
+              }}
+              onCancel={() => setIsNewOccurrenceModalOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Cards de Estatísticas */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <Card>
@@ -203,15 +249,17 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Últimos 7 Dias</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.recent}</div>
-          </CardContent>
-        </Card>
+        {isAdmin && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Últimos 7 Dias</CardTitle>
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.recent}</div>
+            </CardContent>
+          </Card>
+        )}
       </div>
       
       {/* Mapa */}

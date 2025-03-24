@@ -16,7 +16,8 @@ import {
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { 
   AlertTriangle, 
@@ -62,20 +63,40 @@ const Occurrences: React.FC = () => {
   const [occurrenceToDelete, setOccurrenceToDelete] = useState<string | null>(null);
   const [isMobileListing, setIsMobileListing] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'accepted' | 'rejected'>('all');
   
   const isMobile = useIsMobile();
   const isAdmin = authService.isAdmin();
 
   // Lista de tipos de ocorrências disponíveis
   const occurrenceTypes = [
-    'Não especificado',
-    'Posse de armas brancas ou de fogo',
-    'Furto',
-    'Roubo',
-    'Homicídio',
-    'Agressão',
-    'Vandalismo',
-    'Outros'
+    'AGRESSOES_OU_BRIGAS',
+    'APOIO_EM_ACIDENTES_DE_TRANSITO',
+    'DEPREDACAO_DO_PATRIMONIO_PUBLICO',
+    'EMERGENCIAS_AMBIENTAIS',
+    'INVASAO_DE_PREDIOS_OU_TERRENOS_PUBLICOS',
+    'MARIA_DA_PENHA',
+    'PERTURBACAO_DO_SOSSEGO_PUBLICO',
+    'POSSE_DE_ARMAS_BRANCAS_OU_DE_FOGO',
+    'PESSOA_SUSPEITA',
+    'ROUBOS_E_FURTOS',
+    'TENTATIVA_DE_SUICIDIO',
+    'USO_E_TRAFICO_DE_DROGAS',
+    'VIOLENCIA_DOMESTICA',
+    'HOMICIDIO',
+    'VANDALISMO',
+    'ACIDENTES_DE_TRANSITO',
+    'ASSALTO_A_MAO_ARMADA',
+    'ASSEDIO',
+    'BULLYING',
+    'ESTUPRO',
+    'EXTORSAO',
+    'FRAUDE',
+    'INCENDIO',
+    'INVASAO_DE_DOMICILIO',
+    'LATROCINIO',
+    'MOTIM',
+    'OUTROS'
   ];
 
   const fetchData = async () => {
@@ -85,8 +106,14 @@ const Occurrences: React.FC = () => {
         ? await occurrenceService.getAllOccurrences()
         : await occurrenceService.getUserOccurrences();
       const occurrencesData = response.data || [];
-      setOccurrences(occurrencesData);
-      setFilteredOccurrences(occurrencesData);
+      // Sort by date and time
+      const sortedOccurrences = occurrencesData.sort((a, b) => {
+        const dateA = new Date(`${a.date}T${a.time}`);
+        const dateB = new Date(`${b.date}T${b.time}`);
+        return dateB.getTime() - dateA.getTime(); // Most recent first
+      });
+      setOccurrences(sortedOccurrences);
+      setFilteredOccurrences(sortedOccurrences);
       
       const stationsData = await policeStationService.getAllPoliceStations();
       setPoliceStations(stationsData);
@@ -104,18 +131,35 @@ const Occurrences: React.FC = () => {
     fetchData();
   }, []);
 
-  // Efeito para filtrar ocorrências quando os tipos selecionados mudarem
+  // Efeito para filtrar ocorrências quando os tipos ou status mudarem
   useEffect(() => {
-    if (selectedTypes.length === 0) {
-      setFilteredOccurrences(occurrences);
-      return;
+    let filtered = [...occurrences];
+
+    // Aplicar filtro de tipo
+    if (selectedTypes.length > 0) {
+      filtered = filtered.filter(occ => 
+        selectedTypes.includes(occ.type)
+      );
     }
 
-    const filtered = occurrences.filter(occ => 
-      selectedTypes.includes(occ.type || 'Não especificado')
-    );
+    // Aplicar filtro de status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(occ => {
+        switch (statusFilter) {
+          case 'open':
+            return !occ.resolved;
+          case 'accepted':
+            return occ.status === 'accepted';
+          case 'rejected':
+            return occ.status === 'rejected';
+          default:
+            return true;
+        }
+      });
+    }
+
     setFilteredOccurrences(filtered);
-  }, [selectedTypes, occurrences]);
+  }, [selectedTypes, statusFilter, occurrences]);
 
   const handleCreateClick = () => {
     setSelectedOccurrence(null);
@@ -250,44 +294,61 @@ const Occurrences: React.FC = () => {
             Gerencie {isAdmin ? "todas" : "suas"} ocorrências registradas
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                {!isMobile && "Filtrar por Tipo"}
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filtros
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
+              <div className="px-2 py-1.5">
+                <p className="text-sm font-medium">Status</p>
+              </div>
+              <DropdownMenuCheckboxItem
+                checked={statusFilter === 'all'}
+                onCheckedChange={() => setStatusFilter('all')}
+              >
+                Todas
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={statusFilter === 'open'}
+                onCheckedChange={() => setStatusFilter('open')}
+              >
+                Em aberto
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={statusFilter === 'accepted'}
+                onCheckedChange={() => setStatusFilter('accepted')}
+              >
+                Aceitas
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={statusFilter === 'rejected'}
+                onCheckedChange={() => setStatusFilter('rejected')}
+              >
+                Recusadas
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5">
+                <p className="text-sm font-medium">Tipos</p>
+              </div>
               {occurrenceTypes.map((type) => (
                 <DropdownMenuCheckboxItem
                   key={type}
                   checked={selectedTypes.includes(type)}
                   onCheckedChange={() => toggleTypeFilter(type)}
                 >
-                  {type}
+                  {formatOccurrenceType(type)}
                 </DropdownMenuCheckboxItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          {isMobile && (
-            <Button 
-              onClick={() => setIsMobileListing(!isMobileListing)} 
-              variant="outline"
-              size="icon"
-            >
-              {isMobileListing ? <List className="h-4 w-4" /> : <List className="h-4 w-4" />}
-            </Button>
-          )}
-          {!isAdmin && (
-            <Button 
-              onClick={handleCreateClick} 
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              {!isMobile && "Nova Ocorrência"}
-            </Button>
-          )}
+          {!isAdmin && <Button onClick={handleCreateClick}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Ocorrência
+          </Button>}
         </div>
       </div>
 

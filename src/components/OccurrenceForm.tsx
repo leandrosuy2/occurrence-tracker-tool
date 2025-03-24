@@ -68,7 +68,11 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
   const [description, setDescription] = useState(occurrence?.description || '');
   const [type, setType] = useState<string>(occurrence?.type || 'Outros');
   const [date, setDate] = useState(occurrence?.date || new Date().toISOString().split('T')[0]);
-  const [time, setTime] = useState(occurrence?.time || new Date().toISOString().split('T')[1].substring(0, 8));
+  const [time, setTime] = useState(occurrence?.time || new Date().toLocaleTimeString('pt-BR', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false 
+  }));
   const [latitude, setLatitude] = useState(occurrence?.latitude || 0);
   const [longitude, setLongitude] = useState(occurrence?.longitude || 0);
   const [policeStationId, setPoliceStationId] = useState(occurrence?.policeStation_id || '');
