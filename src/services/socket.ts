@@ -2,8 +2,8 @@
 import { io } from "socket.io-client";
 
 // Altere a URL conforme necessário (ex.: em produção, use a URL do servidor)
-export const socket = io("https://l2m.tech", {
-// export const socket = io("http://147.79.87.185:3000", {
+// export const socket = io("https://l2m.tech", {
+export const socket = io("http://localhost:3000", {
   withCredentials: true,
   autoConnect: true,
   transports: ['websocket', 'polling'],

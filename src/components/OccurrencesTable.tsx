@@ -209,7 +209,8 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   };
 
   const getImageUrl = (filename: string) => {
-    return `https://l2m.tech/uploads/${filename}`;
+    // return `https://l2m.tech/uploads/${filename}`;
+    return `http://localhost:3000/uploads/${filename}`;
   };
 
   const loadImage = async (filename: string) => {

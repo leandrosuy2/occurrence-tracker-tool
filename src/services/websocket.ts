@@ -11,7 +11,8 @@ const createNewOccurrenceEvent = (data: any) => {
 export const connectWebSocket = () => {
     console.log('WebSocket - Tentando conectar...');
     try {
-        ws = new WebSocket('ws://l2m.tech');
+        // ws = new WebSocket('ws://l2m.tech');
+        ws = new WebSocket('ws://localhost:3000');
         // ws = new WebSocket('ws://147.79.87.185:3000');
 
         ws.onopen = () => {

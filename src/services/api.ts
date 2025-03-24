@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { toast } from "sonner";
 
-const API_URL = 'https://l2m.tech';
-// const API_URL = 'http://localhost:3000';
+// const API_URL = 'https://l2m.tech';
+const API_URL = 'http://localhost:3000';
 export const basePathUrlApiV1 = "/api/v1";
 
 const api = axios.create({

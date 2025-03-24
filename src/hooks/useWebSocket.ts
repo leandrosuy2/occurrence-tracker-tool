@@ -12,7 +12,8 @@ export const useWebSocket = () => {
 
   useEffect(() => {
     // Conecta ao WebSocket
-    ws.current = new WebSocket('wss://l2m.tech/ws');
+    // ws.current = new WebSocket('wss://l2m.tech/ws');
+    ws.current = new WebSocket('ws://localhost:3000/ws');
 
     // Configura os event listeners
     ws.current.onopen = () => {
@@ -43,7 +44,8 @@ export const useWebSocket = () => {
       setTimeout(() => {
         if (ws.current?.readyState === WebSocket.CLOSED) {
           console.log('Tentando reconectar WebSocket...');
-          ws.current = new WebSocket('wss://l2m.tech/ws');
+          // ws.current = new WebSocket('wss://l2m.tech/ws');
+          ws.current = new WebSocket('ws://localhost:3000/ws');
         }
       }, 5000);
     };

@@ -403,7 +403,8 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                     {existingPhotos.map((photo, index) => (
                       <div key={`existing-${index}`} className="relative">
                         <ImageWithAuth
-                          src={`https://l2m.tech/api/v1/images/${photo}`}
+                          // src={`https://l2m.tech/api/v1/images/${photo}`}
+                          src={`http://localhost:3000/api/v1/images/${photo}`}
                           alt={`Existing ${index + 1}`}
                           className="w-full h-[200px] object-cover rounded-lg"
                         />
