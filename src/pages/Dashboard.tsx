@@ -30,6 +30,7 @@ import {
   LineChart,
   Line
 } from 'recharts';
+import ChatModal from '@/components/ChatModal';
 
 const COLORS = ['#FF4B4B', '#FFA726', '#66BB6A', '#42A5F5', '#7E57C2', '#EC407A', '#26A69A'];
 
@@ -47,6 +48,10 @@ const Dashboard: React.FC = () => {
     monthlyData: []
   });
   const [isNewOccurrenceModalOpen, setIsNewOccurrenceModalOpen] = useState(false);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+  const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null);
+  const currentToken = localStorage.getItem('token') || '';
   
   const isMobile = useIsMobile();
   const isAdmin = authService.isAdmin();
@@ -139,7 +144,9 @@ const Dashboard: React.FC = () => {
   }, []);
 
   useInterval(() => {
-    fetchData();
+    if (!isNewOccurrenceModalOpen && !isChatModalOpen) {
+      fetchData();
+    }
   }, 30000);
 
   useEffect(() => {
@@ -186,6 +193,16 @@ const Dashboard: React.FC = () => {
         {`${(percent * 100).toFixed(0)}%`}
       </text>
     );
+  };
+
+  const handleChatOpen = (occurrenceId: string) => {
+    setSelectedOccurrenceId(occurrenceId);
+    setIsChatModalOpen(true);
+  };
+
+  const handleChatClose = () => {
+    setIsChatModalOpen(false);
+    setSelectedOccurrenceId(null);
   };
 
   return (
@@ -282,6 +299,7 @@ const Dashboard: React.FC = () => {
                 policeStations={policeStations}
                 height={isMobile ? "h-[300px]" : "h-[600px]"}
                 getUserLocation={true}
+                onOccurrenceClick={handleChatOpen}
               />
             )}
           </CardContent>
@@ -476,6 +494,15 @@ const Dashboard: React.FC = () => {
           </Card>
         </>
       )}
+
+      {/* ChatModal - Always render but control visibility with isOpen */}
+      <ChatModal
+        isOpen={isChatModalOpen}
+        onClose={handleChatClose}
+        occurrenceId={selectedOccurrenceId || ''}
+        userId={currentUser?.id || ''}
+        token={currentToken}
+      />
     </div>
   );
 };

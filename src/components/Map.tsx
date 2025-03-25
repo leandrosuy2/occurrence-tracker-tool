@@ -4,6 +4,8 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Occurrence, PoliceStation } from '@/types';
 import { MapPin, AlertTriangle, Shield, FileText } from 'lucide-react';
+import { OccurrenceType } from './OccurrenceTypeModal';
+import { formatOccurrenceType } from '@/utils/occurrenceUtils';
 
 // Corrigir o problema dos ícones do Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -22,6 +24,7 @@ interface MapProps {
   selectionMode?: boolean;
   getUserLocation?: boolean;
   height?: string;
+  onOccurrenceClick?: (occurrenceId: string) => void;
 }
 
 // Componente para atualizar o mapa quando o centro mudar
@@ -34,16 +37,16 @@ const ChangeView: React.FC<{ center: [number, number]; zoom: number }> = ({ cent
 };
 
 // Componente para o ícone personalizado
-const CustomIcon: React.FC<{ type: string; isCurrentLocation?: boolean }> = ({ type, isCurrentLocation }) => {
+const CustomIcon: React.FC<{ type: OccurrenceType; isCurrentLocation?: boolean }> = ({ type, isCurrentLocation }) => {
   const getIconColor = () => {
     if (isCurrentLocation) return '#3b82f6'; // Azul para localização atual
     switch (type) {
-      case 'homicidio':
+      case 'HOMICIDIO':
+      case 'LATROCINIO':
         return '#ef4444'; // Vermelho
-      case 'furto':
+      case 'ROUBOS_E_FURTOS':
+      case 'ASSALTO_A_MAO_ARMADA':
         return '#f59e0b'; // Amarelo
-      case 'roubo':
-        return '#f97316'; // Laranja
       default:
         return '#3b82f6'; // Azul
     }
@@ -52,10 +55,11 @@ const CustomIcon: React.FC<{ type: string; isCurrentLocation?: boolean }> = ({ t
   const getIcon = () => {
     if (isCurrentLocation) return <MapPin className="w-6 h-6" />;
     switch (type) {
-      case 'homicidio':
+      case 'HOMICIDIO':
+      case 'LATROCINIO':
         return <AlertTriangle className="w-6 h-6" />;
-      case 'furto':
-      case 'roubo':
+      case 'ROUBOS_E_FURTOS':
+      case 'ASSALTO_A_MAO_ARMADA':
         return <FileText className="w-6 h-6" />;
       default:
         return <MapPin className="w-6 h-6" />;
@@ -103,7 +107,8 @@ const Map: React.FC<MapProps> = ({
   onLocationSelect,
   selectionMode = false,
   getUserLocation = false,
-  height = 'h-[400px]'
+  height = 'h-[400px]',
+  onOccurrenceClick
 }) => {
   const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
@@ -208,6 +213,12 @@ const Map: React.FC<MapProps> = ({
     }
   };
 
+  const handleOpenChat = (occurrence: Occurrence) => {
+    if (onOccurrenceClick) {
+      onOccurrenceClick(occurrence.id);
+    }
+  };
+
   return (
     <div className={`w-full ${height} rounded-lg overflow-hidden relative`}>
       <style>
@@ -260,169 +271,94 @@ const Map: React.FC<MapProps> = ({
 
         {/* Marcadores de ocorrências */}
         {occurrences.map((occurrence) => (
-          occurrence.latitude && occurrence.longitude ? (
-            <Marker
-              key={occurrence.id}
-              position={[occurrence.latitude, occurrence.longitude]}
-              icon={L.divIcon({
-                className: 'custom-marker',
-                html: `<div class="relative">
-                  <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: ${occurrence.type === 'homicidio' ? '#ef4444' :
-                    occurrence.type === 'furto' ? '#f59e0b' :
-                      occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
-                  }">
-                    ${occurrence.type === 'homicidio' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' :
-                    occurrence.type === 'furto' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>' :
-                      occurrence.type === 'roubo' ? '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' :
-                        '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
-                  }</div>
-                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: ${occurrence.type === 'homicidio' ? '#ef4444' :
-                    occurrence.type === 'furto' ? '#f59e0b' :
-                      occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
-                  }"></div>
-                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: ${occurrence.type === 'homicidio' ? '#ef4444' :
-                    occurrence.type === 'furto' ? '#f59e0b' :
-                      occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
-                  }"></div>
-                </div>`,
-                iconSize: [32, 32],
-                iconAnchor: [16, 16]
-              })}
-            >
-              <Popup>
-                <div className="p-4 min-w-[300px]">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-3 h-3 rounded-full" style={{
-                      backgroundColor: occurrence.type === 'homicidio' ? '#ef4444' :
-                        occurrence.type === 'furto' ? '#f59e0b' :
-                          occurrence.type === 'roubo' ? '#f97316' : '#3b82f6'
-                    }}></div>
-                    <div>
-                      <h3 className="font-semibold text-lg">{occurrence.title || 'Sem título'}</h3>
-                      <span className={`text-sm font-medium ${occurrence.type === 'homicidio' ? 'text-red-600' :
-                          occurrence.type === 'furto' ? 'text-yellow-600' :
-                            occurrence.type === 'roubo' ? 'text-orange-600' : 'text-blue-600'
-                        }`}>
-                        {occurrence.type.charAt(0).toUpperCase() + occurrence.type.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {occurrence.description && (
-                    <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                      <p className="text-sm text-gray-600">{occurrence.description}</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Data e Hora:</span>
-                      <span className="font-medium">
-                        {new Date(occurrence.date).toLocaleDateString('pt-BR')} às {occurrence.time}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Status:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${occurrence.resolved
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                        }`}>
-                        {occurrence.resolved ? 'Resolvido' : 'Não resolvido'}
-                      </span>
-                    </div>
-
-                    {occurrence.User && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Registrado por:</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-xs font-medium text-gray-600">
-                              {occurrence.User.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <span className="font-medium">{occurrence.User.name}</span>
-                        </div>
-                      </div>
-                    )}
+          <Marker
+            key={occurrence.id}
+            position={[occurrence.latitude, occurrence.longitude]}
+            icon={L.divIcon({
+              className: 'custom-marker',
+              html: `<div class="relative">
+                <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: ${occurrence.type === 'HOMICIDIO' || occurrence.type === 'LATROCINIO' ? '#ef4444' :
+                  occurrence.type === 'ROUBOS_E_FURTOS' || occurrence.type === 'ASSALTO_A_MAO_ARMADA' ? '#f59e0b' : '#3b82f6'
+                }">
+                  ${occurrence.type === 'HOMICIDIO' || occurrence.type === 'LATROCINIO' ?
+                  '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' :
+                  occurrence.type === 'ROUBOS_E_FURTOS' || occurrence.type === 'ASSALTO_A_MAO_ARMADA' ?
+                    '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>' :
+                    '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+                }</div>
+                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: ${occurrence.type === 'HOMICIDIO' || occurrence.type === 'LATROCINIO' ? '#ef4444' :
+                  occurrence.type === 'ROUBOS_E_FURTOS' || occurrence.type === 'ASSALTO_A_MAO_ARMADA' ? '#f59e0b' : '#3b82f6'
+                }"></div>
+                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: ${occurrence.type === 'HOMICIDIO' || occurrence.type === 'LATROCINIO' ? '#ef4444' :
+                  occurrence.type === 'ROUBOS_E_FURTOS' || occurrence.type === 'ASSALTO_A_MAO_ARMADA' ? '#f59e0b' : '#3b82f6'
+                }"></div>
+              </div>`,
+              iconSize: [40, 40],
+              iconAnchor: [20, 20]
+            })}
+          >
+            <Popup>
+              <div className="p-2">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-3 h-3 rounded-full" style={{
+                    backgroundColor: occurrence.type === 'HOMICIDIO' || occurrence.type === 'LATROCINIO' ? '#ef4444' :
+                      occurrence.type === 'ROUBOS_E_FURTOS' || occurrence.type === 'ASSALTO_A_MAO_ARMADA' ? '#f59e0b' : '#3b82f6'
+                  }}></div>
+                  <div>
+                    <h3 className="font-semibold text-lg">{occurrence.title || 'Sem título'}</h3>
+                    <span className={`text-sm font-medium ${occurrence.type === 'HOMICIDIO' || occurrence.type === 'LATROCINIO' ? 'text-red-600' :
+                        occurrence.type === 'ROUBOS_E_FURTOS' || occurrence.type === 'ASSALTO_A_MAO_ARMADA' ? 'text-yellow-600' : 'text-blue-600'
+                      }`}>
+                      {formatOccurrenceType(occurrence.type)}
+                    </span>
                   </div>
                 </div>
-              </Popup>
-            </Marker>
-          ) : null
+                <p className="text-sm text-gray-600 mb-2">{occurrence.description || 'Sem descrição'}</p>
+                <button
+                  onClick={() => handleOpenChat(occurrence)}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                >
+                  Abrir Chat
+                </button>
+              </div>
+            </Popup>
+          </Marker>
         ))}
 
         {/* Marcadores de delegacias */}
         {policeStations.map((station) => (
-          station.latitude && station.longitude ? (
-            <Marker
-              key={station.id}
-              position={[station.latitude, station.longitude]}
-              icon={L.divIcon({
-                className: 'custom-marker',
-                html: `<div class="relative">
-                  <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: #1e40af">
-                    <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                      <circle cx="12" cy="12" r="3" fill="currentColor"/>
-                      <path d="M12 9v6M9 12h6"/>
-                    </svg>
-                  </div>
-                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: #1e40af"></div>
-                  <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: #1e40af"></div>
-                </div>`,
-                iconSize: [32, 32],
-                iconAnchor: [16, 16]
-              })}
-            >
-              <Popup>
-                <div className="p-4 min-w-[300px]">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-3 h-3 rounded-full bg-blue-800"></div>
-                    <div>
-                      <h3 className="font-semibold text-lg">{station.name}</h3>
-                      <span className="text-sm font-medium text-blue-800">Delegacia de Polícia</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 rounded-lg p-3 mb-3">
-                    <p className="text-sm text-blue-800">{station.address}</p>
-                  </div>
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Telefone:</span>
-                      <span className="font-medium text-blue-800">{station.phone}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Horário de Atendimento:</span>
-                      <span className="font-medium text-blue-800">24 horas</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Distrito:</span>
-                      <span className="font-medium text-blue-800">{station.district || 'Não informado'}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Região:</span>
-                      <span className="font-medium text-blue-800">{station.region || 'Não informado'}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-gray-200">
-                    <div className="flex items-center gap-2 text-sm text-blue-800">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                      </svg>
-                      <span>Local seguro para registro de ocorrências</span>
-                    </div>
+          <Marker
+            key={station.id}
+            position={[station.latitude, station.longitude]}
+            icon={L.divIcon({
+              className: 'custom-marker',
+              html: `<div class="relative">
+                <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: #3b82f6">
+                  <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/>
+                  </svg>
+                </div>
+                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: #3b82f6"></div>
+              </div>`,
+              iconSize: [40, 40],
+              iconAnchor: [20, 20]
+            })}
+          >
+            <Popup>
+              <div className="p-2">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <div>
+                    <h3 className="font-semibold text-lg">{station.name}</h3>
+                    <span className="text-sm text-gray-600">{station.address}</span>
                   </div>
                 </div>
-              </Popup>
-            </Marker>
-          ) : null
+                <div className="text-sm text-gray-600">
+                  <p>Telefone: {station.phone}</p>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
         ))}
       </MapContainer>
 

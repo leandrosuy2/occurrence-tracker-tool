@@ -1,4 +1,5 @@
 let ws: WebSocket | null = null;
+let messageHandlers: ((data: any) => void)[] = [];
 
 // Evento customizado para novas ocorrências
 const createNewOccurrenceEvent = (data: any) => {
@@ -8,62 +9,91 @@ const createNewOccurrenceEvent = (data: any) => {
   });
 };
 
-export const connectWebSocket = () => {
-    console.log('WebSocket - Tentando conectar...');
+export const addMessageHandler = (handler: (data: any) => void) => {
+  messageHandlers.push(handler);
+};
+
+export const removeMessageHandler = (handler: (data: any) => void) => {
+  messageHandlers = messageHandlers.filter(h => h !== handler);
+};
+
+export const connectWebSocket = (chatId: string, userId: string, token: string, userName: string) => {
+    console.log('Conectando ao WebSocket...', { chatId, userId, userName });
+    
+    // Se já existe uma conexão, fechar
+    if (ws) {
+        ws.close();
+    }
+
     try {
-        // ws = new WebSocket('ws://l2m.tech');
-        ws = new WebSocket('ws://localhost:3000');
-        // ws = new WebSocket('ws://147.79.87.185:3000');
+        ws = new WebSocket(`ws://localhost:3000?chatId=${chatId}&userId=${userId}&token=${token}`);
 
         ws.onopen = () => {
-            console.log('WebSocket - 🔌 Conectado');
-            // Enviar mensagem de teste
+            console.log('WebSocket conectado');
+            // Enviar mensagem de join
             ws?.send(JSON.stringify({
-                type: 'CONNECT',
-                data: { clientId: 'frontend' }
+                type: 'JOIN_CHAT',
+                chatId,
+                userId,
+                userName
             }));
         };
 
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                console.log('WebSocket - 📩 Mensagem recebida:', data);
-
-                if (data.type === 'NEW_OCURRENCE') {
-                    console.log('WebSocket - Nova ocorrência recebida:', data.data);
-                    // Disparar evento customizado com os dados da ocorrência
-                    const event = createNewOccurrenceEvent(data.data);
-                    window.dispatchEvent(event);
-                    console.log('WebSocket - Evento newOccurrence disparado');
-                }
+                console.log('Mensagem recebida:', data);
+                messageHandlers.forEach(handler => handler(data));
             } catch (error) {
-                console.error('WebSocket - ❌ Erro ao processar mensagem:', error);
+                console.error('Erro ao processar mensagem:', error);
             }
         };
 
         ws.onerror = (error) => {
-            console.error('WebSocket - ❌ Erro:', error);
-            console.log('WebSocket - Detalhes do erro:', {
-                readyState: ws?.readyState,
-                url: ws?.url,
-                protocol: ws?.protocol,
-                bufferedAmount: ws?.bufferedAmount
-            });
+            console.error('Erro WebSocket:', error);
+            messageHandlers.forEach(handler => handler({
+                type: 'ERROR',
+                message: 'Erro na conexão'
+            }));
         };
 
-        ws.onclose = (event) => {
-            console.log('WebSocket - ❌ Desconectado');
-            console.log('WebSocket - Código de fechamento:', event.code);
-            console.log('WebSocket - Razão:', event.reason);
-            console.log('WebSocket - Estado final:', ws?.readyState);
-            // Tentar reconectar após 5 segundos
-            setTimeout(connectWebSocket, 5000);
+        ws.onclose = () => {
+            console.log('WebSocket desconectado');
+            messageHandlers.forEach(handler => handler({
+                type: 'ERROR',
+                message: 'Conexão fechada'
+            }));
+            
+            // Tenta reconectar após 3 segundos
+            setTimeout(() => connectWebSocket(chatId, userId, token, userName), 3000);
         };
     } catch (error) {
-        console.error('WebSocket - ❌ Erro ao criar conexão:', error);
-        setTimeout(connectWebSocket, 5000);
+        console.error('Erro ao criar WebSocket:', error);
+        messageHandlers.forEach(handler => handler({
+            type: 'ERROR',
+            message: 'Erro ao criar conexão'
+        }));
     }
 };
 
-// Conectar ao WebSocket quando o módulo for carregado
-connectWebSocket(); 
+export const sendMessage = (message: any) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(message));
+    } else {
+        console.error('WebSocket não está conectado');
+        messageHandlers.forEach(handler => handler({
+            type: 'ERROR',
+            message: 'Não está conectado'
+        }));
+    }
+};
+
+export const disconnectWebSocket = () => {
+    if (ws) {
+        ws.close();
+        ws = null;
+    }
+};
+
+// Não conectar automaticamente ao carregar o módulo
+// connectWebSocket(); 
