@@ -28,7 +28,8 @@ import {
   Trash2, 
   MapPin,
   List,
-  Filter
+  Filter,
+  MessageCircle
 } from 'lucide-react';
 import OccurrenceForm from '@/components/OccurrenceForm';
 import Map from '@/components/Map';
@@ -50,6 +51,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import OccurrencesTable from '@/components/OccurrencesTable';
 import authService from '@/services/authService';
 import { formatOccurrenceType } from '@/utils/occurrenceUtils';
+import ChatModal from '@/components/ChatModal';
 
 const Occurrences: React.FC = () => {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
@@ -64,9 +66,12 @@ const Occurrences: React.FC = () => {
   const [isMobileListing, setIsMobileListing] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'accepted' | 'rejected'>('all');
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedOccurrenceForChat, setSelectedOccurrenceForChat] = useState<Occurrence | null>(null);
   
   const isMobile = useIsMobile();
   const isAdmin = authService.isAdmin();
+  const currentUser = authService.getCurrentUser();
 
   // Lista de tipos de ocorrências disponíveis
   const occurrenceTypes = [
@@ -197,6 +202,11 @@ const Occurrences: React.FC = () => {
     setIsMapOpen(true);
   };
 
+  const handleChatClick = (occurrence: Occurrence) => {
+    setSelectedOccurrenceForChat(occurrence);
+    setIsChatOpen(true);
+  };
+
   const getOccurrenceTypeIcon = (type: string) => {
     switch (type) {
       case 'homicidio': 
@@ -249,6 +259,10 @@ const Occurrences: React.FC = () => {
                 <MapPin className="h-4 w-4 mr-2" />
                 Ver no mapa
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleChatClick(occurrence)}>
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Abrir Chat
+              </DropdownMenuItem>
               {!isAdmin && (
                 <>
                   <DropdownMenuItem onClick={() => handleEditClick(occurrence)}>
@@ -270,7 +284,7 @@ const Occurrences: React.FC = () => {
         
         <p className="text-sm mt-2 line-clamp-2">{occurrence.description}</p>
         
-        <div className="mt-4">
+        <div className="mt-4 flex gap-2">
           <Button 
             variant="ghost" 
             size="sm"
@@ -279,6 +293,15 @@ const Occurrences: React.FC = () => {
           >
             <MapPin className="h-4 w-4" />
             <span>Ver no mapa</span>
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="flex items-center gap-1 p-0" 
+            onClick={() => handleChatClick(occurrence)}
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span>Abrir Chat</span>
           </Button>
         </div>
       </CardContent>
@@ -371,6 +394,7 @@ const Occurrences: React.FC = () => {
               onUpdate={fetchData}
               onEdit={handleEditClick}
               onDelete={(id) => handleDeleteClick(id.toString())}
+              onChat={handleChatClick}
               isAdmin={isAdmin}
             />
           )}
@@ -491,6 +515,21 @@ const Occurrences: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ChatModal */}
+      {selectedOccurrenceForChat && currentUser && (
+        <ChatModal
+          isOpen={isChatOpen}
+          onClose={() => {
+            setIsChatOpen(false);
+            setSelectedOccurrenceForChat(null);
+          }}
+          occurrenceId={selectedOccurrenceForChat.id}
+          userId={currentUser.id}
+          token={localStorage.getItem('token') || ''}
+          userName={currentUser.name}
+        />
+      )}
     </div>
   );
 };

@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, MapPin, AlertTriangle, FileText, Eye, ChevronLeft, ChevronRight, Image, X, Download } from 'lucide-react';
+import { Pencil, Trash2, MapPin, AlertTriangle, FileText, Eye, ChevronLeft, ChevronRight, Image, X, Download, MessageCircle } from 'lucide-react';
 import { Occurrence } from '@/types';
 import {
   Dialog,
@@ -27,6 +27,7 @@ interface OccurrencesTableProps {
   onUpdate: () => void;
   onEdit: (occurrence: Occurrence) => void;
   onDelete: (id: string) => void;
+  onChat?: (occurrence: Occurrence) => void;
   isAdmin?: boolean;
 }
 
@@ -37,6 +38,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   onUpdate,
   onEdit,
   onDelete,
+  onChat,
   isAdmin = false
 }): JSX.Element => {
   const [addresses, setAddresses] = useState<Record<number, string>>({});
@@ -268,7 +270,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
               <TableHead className="w-[120px]">Data</TableHead>
               <TableHead className="w-[100px]">Hora</TableHead>
               <TableHead className="w-[100px]">Fotos</TableHead>
-              <TableHead className="w-[150px] text-right">Ações</TableHead>
+              <TableHead className="w-[180px] text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -315,6 +317,16 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                     >
                       <MapPin className="h-4 w-4 text-blue-500" />
                     </Button>
+                    {onChat && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onChat(occurrence)}
+                        className="hover:bg-green-100 dark:hover:bg-green-900"
+                      >
+                        <MessageCircle className="h-4 w-4 text-green-500" />
+                      </Button>
+                    )}
                     {!isAdmin && (
                       <>
                         <Button
