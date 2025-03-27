@@ -10,14 +10,17 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const checkAdmin = () => {
       const user = authService.getCurrentUser();
-      console.log('Sidebar - User data:', user);
-      const adminStatus = authService.isAdmin();
-      console.log('Sidebar - Admin status:', adminStatus);
-      setIsAdmin(adminStatus);
+      if (user) {
+        console.log('Sidebar - Dados do usuário:', user);
+        const adminStatus = authService.isAdmin();
+        console.log('Sidebar - Status de admin:', adminStatus);
+        setIsAdmin(adminStatus);
+      }
     };
 
     checkAdmin();
@@ -25,6 +28,12 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     const interval = setInterval(checkAdmin, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setUser(user);
+    }
+  }, [user]);
 
   return (
     <div className={cn(

@@ -128,18 +128,16 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
     return () => clearInterval(timer);
   }, [timeLeft, onReject]);
 
-  // Efeito para controlar a abertura do modal quando uma nova ocorrência chegar
+  // Efeito para lidar com mudanças na ocorrência
   useEffect(() => {
-    console.log('Modal - Efeito de ocorrência:', { occurrence });
     if (occurrence) {
-      console.log('Modal - Abrindo modal');
+      console.log('NewOccurrenceModal - Modal aberto com ocorrência:', occurrence);
       setIsOpen(true);
-      setTimeLeft(MAX_RESPONSE_TIME);
     }
   }, [occurrence]);
 
   const handleClose = () => {
-    console.log('Modal - Fechando modal');
+    console.log('NewOccurrenceModal - Fechando modal');
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -149,8 +147,8 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
   };
 
   const handleAccept = () => {
+    console.log('NewOccurrenceModal - Aceitando ocorrência:', occurrence);
     if (occurrence) {
-      console.log('Modal - Aceitando ocorrência');
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -161,7 +159,7 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
   };
 
   const handleReject = () => {
-    console.log('Modal - Rejeitando ocorrência');
+    console.log('NewOccurrenceModal - Rejeitando ocorrência');
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;

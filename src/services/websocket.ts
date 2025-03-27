@@ -26,7 +26,8 @@ export const connectWebSocket = (chatId: string, userId: string, token: string, 
     }
 
     try {
-        ws = new WebSocket(`ws://localhost:3000?chatId=${chatId}&userId=${userId}&token=${token}`);
+        const WS_URL = import.meta.env.VITE_WS_URL;
+        ws = new WebSocket(`${WS_URL}/?chatId=${chatId}&userId=${userId}&token=${token}`);
 
         ws.onopen = () => {
             console.log('WebSocket conectado');

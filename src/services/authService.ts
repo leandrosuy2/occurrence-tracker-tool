@@ -9,6 +9,7 @@ interface JwtPayload {
   email: string;
   role: string;
   cpf: string;
+  exp: number;
 }
 
 interface UserResponse {
@@ -27,7 +28,7 @@ const login = async (data: LoginRequest) => {
     const response = await api.post('/auth/login', data);
     const { token } = response.data;
     
-    // console.log('Token recebido:', token);
+    console.log('Token recebido:', token);
     
     // Salva o token
     localStorage.setItem('token', token);
@@ -37,7 +38,7 @@ const login = async (data: LoginRequest) => {
     
     // Decodifica o token para obter os dados básicos do usuário
     const decoded = jwtDecode<JwtPayload>(token);
-    // console.log('Token decodificado:', decoded);
+    console.log('Token decodificado:', decoded);
     
     // Cria o objeto user com os dados do token
     const user: User = {
@@ -52,7 +53,7 @@ const login = async (data: LoginRequest) => {
     localStorage.setItem('user', JSON.stringify(user));
     
     // Agora busca os dados completos do usuário para atualizar a role
-    // console.log('Buscando perfil do usuário...');
+    console.log('Buscando perfil do usuário...');
     const userResponse = await api.get(`${basePathUrlApiV1}/users/profile`);
     console.log('Resposta do perfil:', userResponse.data);
     
@@ -65,7 +66,7 @@ const login = async (data: LoginRequest) => {
     console.log('User data after login:', user);
     return { token, user };
   } catch (error) {
-    // console.error('Login error:', error);
+    console.error('Login error:', error);
     toast.error("Falha no login. Verifique suas credenciais.");
     throw error;
   }
@@ -77,7 +78,7 @@ const register = async (data: RegisterRequest) => {
     toast.success("Registro realizado com sucesso!");
     return response.data;
   } catch (error) {
-    // console.error('Register error:', error);
+    console.error('Register error:', error);
     toast.error("Erro ao cadastrar usuário. Verifique os dados informados.");
     throw error;
   }
@@ -92,7 +93,7 @@ const getCurrentUser = (): User | null => {
   const userStr = localStorage.getItem('user');
   if (userStr) {
     const user = JSON.parse(userStr);
-    // console.log('Current user data:', user);
+    console.log('Current user data:', user);
     return user;
   }
   return null;
@@ -100,7 +101,15 @@ const getCurrentUser = (): User | null => {
 
 const isAuthenticated = (): boolean => {
   const token = localStorage.getItem('token');
-  return !!token;
+  if (!token) return false;
+
+  try {
+    const decoded = jwtDecode(token) as JwtPayload;
+    const currentTime = Date.now() / 1000;
+    return decoded.exp ? decoded.exp > currentTime : false;
+  } catch (error) {
+    return false;
+  }
 };
 
 const isAdmin = (): boolean => {

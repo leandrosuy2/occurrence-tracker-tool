@@ -2,8 +2,8 @@
 import { io } from "socket.io-client";
 
 // Altere a URL conforme necessário (ex.: em produção, use a URL do servidor)
-// export const socket = io("https://l2m.tech", {
-export const socket = io("http://localhost:3000", {
+export const socket = io(import.meta.env.VITE_API_URL, {
+// export const socket = io("http://localhost:3000", {
   withCredentials: true,
   autoConnect: true,
   transports: ['websocket', 'polling'],

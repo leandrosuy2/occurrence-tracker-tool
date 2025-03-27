@@ -12,8 +12,11 @@ export const useWebSocket = () => {
 
   useEffect(() => {
     // Conecta ao WebSocket
-    // ws.current = new WebSocket('wss://l2m.tech/ws');
-    ws.current = new WebSocket('ws://localhost:3000/ws');
+    const wsUrl = import.meta.env.PROD 
+      ? 'wss://l2m.tech/ws'
+      : import.meta.env.VITE_WS_URL + '/ws';
+      
+    ws.current = new WebSocket(wsUrl);
 
     // Configura os event listeners
     ws.current.onopen = () => {
@@ -40,14 +43,11 @@ export const useWebSocket = () => {
 
     ws.current.onclose = () => {
       console.log('WebSocket desconectado');
-      // Tenta reconectar após 5 segundos
-      setTimeout(() => {
-        if (ws.current?.readyState === WebSocket.CLOSED) {
-          console.log('Tentando reconectar WebSocket...');
-          // ws.current = new WebSocket('wss://l2m.tech/ws');
-          ws.current = new WebSocket('ws://localhost:3000/ws');
-        }
-      }, 5000);
+      // Tenta reconectar após 3 segundos
+      if (ws.current?.readyState === WebSocket.CLOSED) {
+        console.log('Tentando reconectar WebSocket...');
+        ws.current = new WebSocket(wsUrl);
+      }
     };
 
     // Cleanup

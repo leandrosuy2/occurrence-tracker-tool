@@ -210,9 +210,8 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
     }
   };
 
-  const getImageUrl = (filename: string) => {
-    // return `https://l2m.tech/uploads/${filename}`;
-    return `http://localhost:3000/uploads/${filename}`;
+  const getFileUrl = (filename: string) => {
+    return `${import.meta.env.VITE_API_URL}/uploads/${filename}`;
   };
 
   const loadImage = async (filename: string) => {
@@ -223,7 +222,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
         return;
       }
 
-      const response = await fetch(getImageUrl(filename), {
+      const response = await fetch(getFileUrl(filename), {
         headers: {
           Authorization: `Bearer ${token}`
         }

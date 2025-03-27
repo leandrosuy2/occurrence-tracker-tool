@@ -10,8 +10,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { useWebSocket } from '@/hooks/useWebSocket';
 import { formatOccurrenceType } from '@/utils/occurrenceUtils';
+import { connectNotificationWebSocket, disconnectNotificationWebSocket } from '@/services/notificationWebSocket';
+import notificationService from '@/services/notificationService';
 
 interface Notification {
   id: string;
@@ -32,7 +33,6 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { lastMessage } = useWebSocket();
 
   // Inicializa o elemento de áudio
   useEffect(() => {
@@ -57,16 +57,25 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
     setHasUserInteracted(true);
   };
 
-  // Efeito para processar mensagens do WebSocket
+  // Efeito para conectar ao Socket.IO e processar eventos
   useEffect(() => {
-    if (lastMessage && lastMessage.type === 'NEW_OCURRENCE') {
-      console.log('Nova ocorrência recebida via WebSocket:', lastMessage.data);
+    // Define o status de admin no serviço de notificação
+    notificationService.setAdminStatus(isAdmin);
+
+    // Conecta ao Socket.IO apenas se for admin
+    if (isAdmin) {
+      connectNotificationWebSocket(isAdmin);
+    }
+
+    // Função para processar novas ocorrências
+    const handleNewOccurrence = (event: CustomEvent) => {
+      const occurrence = event.detail;
+      console.log('Nova ocorrência recebida via Socket.IO:', occurrence);
       
-      const occurrence = lastMessage.data;
       const isQuickOccurrence = occurrence.type === 'OUTROS';
 
-      // Se não for admin e não for ocorrência rápida, ignora
-      if (!isAdmin && !isQuickOccurrence) {
+      // Se não for admin, ignora a notificação
+      if (!isAdmin) {
         return;
       }
 
@@ -97,9 +106,19 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
       toast.info('Nova ocorrência registrada!', {
         description: `${newNotification.title} - ${formatOccurrenceType(newNotification.type)}`,
         duration: 5000,
+        closeButton: false
       });
-    }
-  }, [lastMessage, isAdmin]);
+    };
+
+    // Adiciona listener para o evento customizado
+    window.addEventListener('newOccurrence', handleNewOccurrence as EventListener);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('newOccurrence', handleNewOccurrence as EventListener);
+      disconnectNotificationWebSocket();
+    };
+  }, [isAdmin]);
 
   const markAsRead = (notificationId: string) => {
     setNotifications(prev =>

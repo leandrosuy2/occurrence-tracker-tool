@@ -310,27 +310,6 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
               />
             </div>
             
-            {/* {isAdmin && (
-              <div className="space-y-2">
-                <Label htmlFor="policeStation">Delegacia</Label>
-                <Select
-                  value={policeStationId}
-                  onValueChange={setPoliceStationId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a delegacia" />
-                  </SelectTrigger>
-                  <SelectContent position={isMobile ? "popper" : "item-aligned"} className="max-h-[200px]">
-                    {policeStations.map((station) => (
-                      <SelectItem key={station.id} value={station.id}>
-                        {station.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )} */}
-
             <div className="space-y-2 flex items-end">
               <Button 
                 type="button" 
@@ -403,8 +382,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                     {existingPhotos.map((photo, index) => (
                       <div key={`existing-${index}`} className="relative">
                         <ImageWithAuth
-                          // src={`https://l2m.tech/api/v1/images/${photo}`}
-                          src={`http://localhost:3000/api/v1/images/${photo}`}
+                          src={`${import.meta.env.VITE_API_URL}/api/v1/images/${photo}`}
                           alt={`Existing ${index + 1}`}
                           className="w-full h-[200px] object-cover rounded-lg"
                         />

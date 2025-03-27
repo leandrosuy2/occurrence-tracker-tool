@@ -60,7 +60,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
   // Carrega o histórico de mensagens
   const loadChatHistory = async (chatId: string) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/v1/chats/${chatId}/messages`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chats/${chatId}/messages`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -86,7 +86,11 @@ const ChatModal: React.FC<ChatModalProps> = ({
       await loadChatHistory(chatId);
 
       // Então estabelece a conexão WebSocket
-      const ws = new WebSocket(`ws://localhost:3000?chatId=${chatId}&userId=${userId}&token=${token}`);
+      const wsUrl = import.meta.env.PROD 
+        ? 'wss://l2m.tech'
+        : import.meta.env.VITE_WS_URL;
+      
+      const ws = new WebSocket(`${wsUrl}?chatId=${chatId}&userId=${userId}&token=${token}`);
 
       ws.onopen = () => {
         console.log('✅ WebSocket Conectado!');
@@ -175,16 +179,13 @@ const ChatModal: React.FC<ChatModalProps> = ({
     const initializeChat = async () => {
       try {
         console.log('🚀 Inicializando chat...');
-        const response = await fetch(
-          `http://localhost:3000/api/v1/ocurrences/${occurrenceId}/chat`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-          }
-        );
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/ocurrences/${occurrenceId}/chat`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
         const data = await response.json();
         const newChatId = data.chat.id;
         console.log('📝 Chat ID:', newChatId);
