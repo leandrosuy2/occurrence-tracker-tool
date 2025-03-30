@@ -7,9 +7,6 @@ export const basePathUrlApiV1 = "/api/v1";
 
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Inicializa o token no header da API se existir
@@ -24,6 +21,13 @@ api.interceptors.request.use((config) => {
   
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  // Se for FormData, remove o Content-Type para deixar o navegador definir automaticamente
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+    // Garante que o FormData seja enviado corretamente
+    config.headers['Accept'] = 'application/json';
   }
   
   return config;

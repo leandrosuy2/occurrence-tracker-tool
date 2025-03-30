@@ -1,4 +1,3 @@
-import api from './api';
 import { toast } from 'sonner';
 import { Occurrence, CreateOccurrenceDTO } from '@/types';
 import { OccurrenceType } from '@/components/OccurrenceTypeModal';
@@ -6,17 +5,24 @@ import { OccurrenceType } from '@/components/OccurrenceTypeModal';
 const basePathUrlApiV1 = '/api/v1';
 
 const occurrenceService = {
-  createOccurrence: async (data: FormData | CreateOccurrenceDTO) => {
+  createOccurrence: async (formData: FormData) => {
     try {
-      const response = await api.post(`${basePathUrlApiV1}/ocurrences/save`, data, {
-        headers: data instanceof FormData ? {
-          'Content-Type': 'multipart/form-data'
-        } : {
-          'Content-Type': 'application/json'
-        }
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/save`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          // IMPORTANTE: Não definir Content-Type aqui, deixe o navegador definir automaticamente
+        },
+        body: formData
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to create occurrence');
+      }
+
+      const data = await response.json();
       toast.success("Ocorrência registrada com sucesso!");
-      return response.data;
+      return data;
     } catch (error) {
       console.error('Error creating occurrence:', error);
       toast.error('Erro ao criar ocorrência');
@@ -26,18 +32,36 @@ const occurrenceService = {
 
   createQuickOccurrence: async (latitude: number, longitude: number, type: OccurrenceType) => {
     try {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const time = `${hours}:${minutes}:00`;
+
       const data: CreateOccurrenceDTO = {
         type,
         latitude,
         longitude,
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toTimeString().split(' ')[0],
+        date: now.toISOString().split('T')[0],
+        time,
         policeStation_id: 0, // Será definido pelo backend
       };
 
-      const response = await api.post(`${basePathUrlApiV1}/ocurrences/quick`, data);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/quick`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create quick occurrence');
+      }
+
+      const responseData = await response.json();
       toast.success("Ocorrência rápida registrada com sucesso!");
-      return response.data;
+      return responseData;
     } catch (error) {
       console.error('Error creating quick occurrence:', error);
       toast.error('Erro ao registrar ocorrência rápida');
@@ -47,8 +71,17 @@ const occurrenceService = {
 
   getUserOccurrences: async () => {
     try {
-      const response = await api.get(`${basePathUrlApiV1}/ocurrences/self`);
-      return response.data;
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/self`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user occurrences');
+      }
+
+      return await response.json();
     } catch (error) {
       console.error('Error fetching user occurrences:', error);
       toast.error('Erro ao buscar suas ocorrências');
@@ -58,8 +91,17 @@ const occurrenceService = {
 
   getOccurrenceById: async (id: string) => {
     try {
-      const response = await api.get(`${basePathUrlApiV1}/ocurrences/${id}`);
-      return response.data;
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch occurrence');
+      }
+
+      return await response.json();
     } catch (error) {
       console.error('Error fetching occurrence:', error);
       toast.error('Erro ao buscar ocorrência');
@@ -67,17 +109,24 @@ const occurrenceService = {
     }
   },
 
-  updateOccurrence: async (id: string, data: FormData | Partial<CreateOccurrenceDTO>) => {
+  updateOccurrence: async (id: string, formData: FormData) => {
     try {
-      const response = await api.put(`${basePathUrlApiV1}/ocurrences/${id}`, data, {
-        headers: data instanceof FormData ? {
-          'Content-Type': 'multipart/form-data'
-        } : {
-          'Content-Type': 'application/json'
-        }
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          // IMPORTANTE: Não definir Content-Type aqui, deixe o navegador definir automaticamente
+        },
+        body: formData
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to update occurrence');
+      }
+
+      const data = await response.json();
       toast.success("Ocorrência atualizada com sucesso!");
-      return response.data;
+      return data;
     } catch (error) {
       console.error('Error updating occurrence:', error);
       toast.error('Erro ao atualizar ocorrência');
@@ -87,9 +136,20 @@ const occurrenceService = {
 
   deleteOccurrence: async (id: string) => {
     try {
-      const response = await api.delete(`${basePathUrlApiV1}/ocurrences/${id}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete occurrence');
+      }
+
+      const data = await response.json();
       toast.success("Ocorrência excluída com sucesso!");
-      return response.data;
+      return data;
     } catch (error) {
       console.error('Error deleting occurrence:', error);
       toast.error('Erro ao excluir ocorrência');
@@ -99,8 +159,17 @@ const occurrenceService = {
 
   getAllOccurrences: async () => {
     try {
-      const response = await api.get(`${basePathUrlApiV1}/ocurrences`);
-      return response.data;
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch all occurrences');
+      }
+
+      return await response.json();
     } catch (error) {
       console.error('Get all occurrences error:', error);
       toast.error("Erro ao buscar todas as ocorrências.");

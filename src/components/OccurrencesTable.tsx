@@ -121,7 +121,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   };
 
   const getOccurrenceTypeBadge = (type: string, title: string | null, description: string | null) => {
-    if (!title && !description) {
+    if (title === "Ocorrência Rápida") {
       return <Badge variant="outline" className="bg-green-100 text-green-700">Ocorrência rápida</Badge>;
     }
     if (title && description) {
@@ -150,7 +150,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   const adjustTime = (time: string) => {
     const [hours, minutes, seconds] = time.split(':').map(Number);
     const date = new Date();
-    date.setHours(hours - 3, minutes, seconds);
+    date.setHours(hours, minutes, seconds);
     return date.toLocaleTimeString('pt-BR', {
       hour: '2-digit',
       minute: '2-digit',

@@ -193,7 +193,15 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
                   {formatOccurrenceType(notification.type)}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {notification.date} às {notification.time}
+                  {new Date().toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })} às {new Date().toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                  })}
                 </span>
               </DropdownMenuItem>
             ))

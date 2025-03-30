@@ -68,11 +68,22 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
   const [description, setDescription] = useState(occurrence?.description || '');
   const [type, setType] = useState<string>(occurrence?.type || 'Outros');
   const [date, setDate] = useState(occurrence?.date || new Date().toISOString().split('T')[0]);
-  const [time, setTime] = useState(occurrence?.time || new Date().toLocaleTimeString('pt-BR', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: false 
-  }));
+  const [time, setTime] = useState(() => {
+    if (occurrence?.time) {
+      // Se o tempo vier do backend, garante que tenha o formato HH:mm:ss
+      const [hours, minutes, seconds] = occurrence.time.split(':');
+      if (seconds) {
+        return occurrence.time;
+      } else {
+        return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
+      }
+    }
+    // Usar o tempo local atual formatado corretamente
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+  });
   const [latitude, setLatitude] = useState(occurrence?.latitude || 0);
   const [longitude, setLongitude] = useState(occurrence?.longitude || 0);
   const [policeStationId, setPoliceStationId] = useState(occurrence?.policeStation_id || '');
@@ -200,32 +211,52 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
       setLoading(true);
       
       const formData = new FormData();
+      
+      // Adicionar campos básicos
       formData.append('title', title);
       formData.append('description', description);
       formData.append('type', type);
       formData.append('latitude', latitude.toString());
       formData.append('longitude', longitude.toString());
       formData.append('date', date);
-      formData.append('time', time);
+      
+      // Ajustar o horário para UTC+3
+      const [hours, minutes] = time.split(':');
+      const dateObj = new Date();
+      dateObj.setHours(parseInt(hours));
+      const adjustedTime = `${dateObj.getHours().toString().padStart(2, '0')}:${minutes}:00`;
+      formData.append('time', adjustedTime);
+      
       if (isAdmin && policeStationId) {
         formData.append('policeStation_id', policeStationId);
       }
+
+      // Adicionar fotos existentes que não foram removidas
+      if (existingPhotos.length > 0) {
+        existingPhotos.forEach(photo => {
+          formData.append('existingPhotos', photo);
+        });
+      }
+
+      // Adicionar novas fotos
+      if (photos.length > 0) {
+        photos.forEach((photo, index) => {
+          formData.append('photos', photo);
+        });
+      }
+
+      // Log para debug
+      console.log('Enviando FormData com os seguintes campos:');
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + (pair[1] instanceof File ? `File: ${(pair[1] as File).name}` : pair[1]));
+      }
       
-      // Append existing photos
-      existingPhotos.forEach(photo => {
-        formData.append('photos', photo);
-      });
-      
-      // Append new photos
-      photos.forEach(photo => {
-        formData.append('photos', photo);
-      });
-      
+      let savedOccurrence;
       if (occurrence?.id) {
-        await occurrenceService.updateOccurrence(occurrence.id, formData);
+        savedOccurrence = await occurrenceService.updateOccurrence(occurrence.id, formData);
         toast.success('Ocorrência atualizada com sucesso!');
       } else {
-        await occurrenceService.createOccurrence(formData);
+        savedOccurrence = await occurrenceService.createOccurrence(formData);
         toast.success('Ocorrência registrada com sucesso!');
       }
       
@@ -305,7 +336,12 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
                 type="time"
                 step="1"
                 value={time}
-                onChange={(e) => setTime(e.target.value)}
+                onChange={(e) => {
+                  // Garantir que o tempo sempre tenha segundos
+                  const newTime = e.target.value;
+                  const [hours, minutes] = newTime.split(':');
+                  setTime(`${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`);
+                }}
                 required
               />
             </div>

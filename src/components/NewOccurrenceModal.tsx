@@ -28,13 +28,20 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
 // Função para formatar a data
 const formatDate = (dateString: string) => {
+  console.log('Formatting date:', dateString);
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    console.error('Invalid date:', dateString);
+    return 'Data inválida';
+  }
   return date.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: false
   });
 };
 
@@ -236,7 +243,7 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
               <h4 className="font-medium">Descrição</h4>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Clock className="h-4 w-4" />
-                <span>Criado em {new Date(occurrence.created_at).toLocaleString('pt-BR')}</span>
+                <span>{formatOccurrenceType(occurrence.type)}</span>
               </div>
             </div>
           </div>
