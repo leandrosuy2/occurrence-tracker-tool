@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Send, Paperclip, AlertCircle } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 
 interface Message {
   id: string;
@@ -10,6 +11,15 @@ interface Message {
   created_at: string;
   type?: 'text' | 'image' | 'system';
   image_url?: string | null;
+}
+
+interface ChatMessageData {
+  type: 'CHAT_MESSAGE' | 'JOIN_CHAT';
+  chatId: string;
+  content?: string;
+  userId: string;
+  userName: string;
+  messageType?: 'image';
 }
 
 interface ChatModalProps {
@@ -30,13 +40,14 @@ const ChatModal: React.FC<ChatModalProps> = ({
   userName
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(isOpen);
-  const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [chatId, setChatId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [chatStatus, setChatStatus] = useState<'open' | 'closed'>('open');
 
   useEffect(() => {
     if (isOpen) {
@@ -46,6 +57,14 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
   const handleClose = () => {
     setIsModalOpen(false);
+    // Limpar estados ao fechar o modal
+    setMessages([]);
+    setInputMessage('');
+    setError(null);
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
     onClose();
   };
 
@@ -60,6 +79,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
   // Carrega o histórico de mensagens
   const loadChatHistory = async (chatId: string) => {
     try {
+      console.log('📚 Carregando histórico do chat:', chatId);
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chats/${chatId}/messages`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -71,147 +91,265 @@ const ChatModal: React.FC<ChatModalProps> = ({
       }
 
       const data = await response.json();
-      setMessages(data);
+      console.log('📚 Histórico carregado:', data);
+      
+      // Converter o formato das mensagens do histórico
+      const formattedMessages = data.map((msg: any) => ({
+        id: msg.id,
+        content: msg.content,
+        userId: msg.user_id,
+        userName: msg.user_name || 'Usuário',
+        type: msg.message_type || 'text',
+        created_at: msg.created_at,
+        image_url: msg.image_url
+      }));
+      
+      console.log('📚 Mensagens formatadas:', formattedMessages);
+      setMessages(formattedMessages);
     } catch (error) {
       console.error('Erro ao carregar histórico:', error);
       setError('Erro ao carregar histórico de mensagens');
     }
   };
 
-  const establishWebSocketConnection = async (chatId: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+  const establishSocketConnection = async (chatId: string) => {
+    if (socketRef.current?.connected) return;
 
     try {
-      // Primeiro carrega o histórico
-      await loadChatHistory(chatId);
+      // Então estabelece a conexão Socket.IO
+      const socket = io(import.meta.env.VITE_API_URL, {
+        transports: ['websocket']
+      });
 
-      // Então estabelece a conexão WebSocket
-      const wsUrl = import.meta.env.PROD 
-        ? 'wss://l2m.tech'
-        : import.meta.env.VITE_WS_URL;
-      
-      const ws = new WebSocket(`${wsUrl}?chatId=${chatId}&userId=${userId}&token=${token}`);
+      console.log('🔌 Tentando conectar Socket.IO...');
 
-      ws.onopen = () => {
-        console.log('✅ WebSocket Conectado!');
+      socket.on('connect', () => {
+        console.log('✅ Socket.IO Conectado!');
         setIsConnected(true);
         setError(null);
 
-        // Envia mensagem de join
-        ws.send(JSON.stringify({
-          type: 'JOIN_CHAT',
-          chatId,
+        // Primeiro autenticar
+        console.log('🔑 Autenticando socket...');
+        socket.emit('authenticate', {
           userId,
-          userName
-        }));
-      };
+          token
+        });
 
-      ws.onclose = () => {
-        console.log('❌ WebSocket Desconectado');
+        // Depois entrar no chat
+        console.log('👋 Entrando no chat:', chatId);
+        socket.emit('join_chat', {
+          chatId
+        });
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.log('❌ Socket.IO Desconectado:', reason);
         setIsConnected(false);
-        wsRef.current = null;
+      });
 
-        // Reconexão após 3 segundos
-        setTimeout(() => {
-          if (isOpen && chatId) {
-            establishWebSocketConnection(chatId);
-          }
-        }, 3000);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('📩 Mensagem recebida:', data);
-          
-          switch (data.type) {
-            case 'WELCOME':
-              console.log('👋 Bem-vindo ao chat!');
-              break;
-
-            case 'CHAT_CONNECTED':
-              console.log(`👤 ${data.userName} conectou`);
-              setMessages(prev => [...prev, {
-                id: Date.now().toString(),
-                content: `${data.userName} entrou na conversa`,
-                type: 'system',
-                created_at: new Date().toISOString()
-              }]);
-              break;
-
-            case 'NEW_MESSAGE':
-              const message = data.message;
-              if (!messages.some(m => m.id === message.id)) {
-                setMessages(prev => [...prev, {
-                  id: message.id,
-                  content: message.content,
-                  userId: message.userId,
-                  userName: message.userName,
-                  type: message.type || 'text',
-                  created_at: message.created_at || new Date().toISOString()
-                }]);
-              }
-              break;
-
-            case 'ERROR':
-              setError(data.message);
-              break;
-          }
-        } catch (error) {
-          console.error('Erro ao processar mensagem:', error);
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error('🚨 Erro WebSocket:', error);
+      socket.on('connect_error', (error) => {
+        console.error('🚨 Erro de conexão Socket.IO:', error);
         setError('Erro na conexão com o chat');
-      };
+      });
 
-      wsRef.current = ws;
+      socket.on('error', (error) => {
+        console.error('🚨 Erro Socket.IO:', error);
+        setError('Erro na conexão com o chat');
+      });
+
+      socket.on('new_message', (message) => {
+        console.log('📩 Nova mensagem recebida:', message);
+        setMessages(prev => {
+          // Verifica se a mensagem já existe
+          if (prev.some(m => m.id === message.id)) {
+            console.log('📝 Mensagem já existe, ignorando...');
+            return prev;
+          }
+
+          const newMessage = {
+            id: message.id,
+            content: message.content,
+            userId: message.user_id,
+            userName: message.user_name || 'Usuário',
+            type: message.message_type || 'text',
+            created_at: message.created_at,
+            image_url: message.image_url
+          };
+          console.log('📝 Adicionando nova mensagem ao estado:', newMessage);
+          return [...prev, newMessage];
+        });
+      });
+
+      socket.on('chat_connected', (data) => {
+        console.log('👤 Usuário conectou:', data);
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          content: `${data.user_name || 'Usuário'} entrou na conversa`,
+          type: 'system',
+          created_at: new Date().toISOString()
+        }]);
+      });
+
+      socket.on('chat_closed', () => {
+        setChatStatus('closed');
+        setError('Este chat foi fechado');
+        setIsConnected(false);
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+        }
+      });
+
+      socketRef.current = socket;
     } catch (error) {
       console.error('Erro ao estabelecer conexão:', error);
       setError('Erro ao conectar ao chat');
     }
   };
 
-  // Efeito para inicializar o chat
+  const checkChatStatus = async (chatId: string) => {
+    try {
+      console.log('🔍 Verificando status do chat:', chatId);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/v1/chats/${chatId}/status`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erro ao verificar status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('📊 Status do chat:', data);
+      
+      // Atualiza o status do chat baseado no isResolved
+      const status = data.isResolved ? 'closed' : 'open';
+      setChatStatus(status);
+      
+      // Se o chat estiver fechado, desconecta
+      if (status === 'closed') {
+        console.log('❌ Chat está fechado, desconectando...');
+        setIsConnected(false);
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status do chat:', error);
+      setError('Erro ao verificar status do chat');
+    }
+  };
+
+  const closeChat = async (chatId: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chats/${chatId}/close`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao fechar o chat');
+      }
+
+      setChatStatus('closed');
+      setError('Chat fechado com sucesso');
+      setIsConnected(false);
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    } catch (error) {
+      console.error('Erro ao fechar chat:', error);
+      setError('Erro ao fechar o chat');
+    }
+  };
+
+  // Update the initialization effect
   useEffect(() => {
     const initializeChat = async () => {
       try {
         console.log('🚀 Inicializando chat...');
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/ocurrences/${occurrenceId}/chat`, {
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const url = `${apiUrl}/api/v1/ocurrences/${occurrenceId}/chat`;
+        console.log('📡 Fazendo requisição para:', url);
+        console.log('🔑 Token:', token ? 'Presente' : 'Ausente');
+        
+        const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
         });
+
+        console.log('📥 Status da resposta:', response.status);
+        console.log('📥 Headers da resposta:', Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Erro na resposta:', errorText);
+          throw new Error(`Erro ao inicializar chat: ${response.status} ${response.statusText}`);
+        }
+
         const data = await response.json();
-        const newChatId = data.chat.id;
+        console.log('✅ Dados recebidos:', data);
+        
+        let newChatId: string;
+        
+        if (response.status === 201) {
+          // Caso de criação de novo chat
+          newChatId = data.id;
+        } else {
+          // Caso de chat existente
+          if (!data.chat || !data.chat.id) {
+            throw new Error('ID do chat não encontrado na resposta');
+          }
+          newChatId = data.chat.id;
+        }
+
         console.log('📝 Chat ID:', newChatId);
         
         setChatId(newChatId);
-        establishWebSocketConnection(newChatId);
+        
+        // Primeiro verificar o status do chat
+        await checkChatStatus(newChatId);
+        
+        // Carregar histórico antes de estabelecer a conexão
+        await loadChatHistory(newChatId);
+        
+        // Estabelecer a conexão
+        console.log('🔄 Estabelecendo conexão...');
+        await establishSocketConnection(newChatId);
       } catch (error) {
         console.error('💥 Erro ao inicializar chat:', error);
         setError('Erro ao inicializar o chat');
+        setIsConnected(false);
       }
     };
 
-    if (isOpen) {
+    if (isOpen && token) {
+      console.log('🔑 Token disponível, iniciando chat...');
       initializeChat();
+    } else {
+      console.log('❌ Token não disponível ou modal fechado');
     }
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
   }, [isOpen, occurrenceId, token]);
 
   const sendMessage = (content: string, type: 'text' | 'image' = 'text') => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !chatId) {
-      console.log('❌ WebSocket não está conectado!');
+    if (!socketRef.current?.connected || !chatId) {
+      console.log('❌ Socket.IO não está conectado!');
       return;
     }
 
@@ -219,34 +357,31 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
     console.log('📤 Enviando mensagem...');
     const messageData = {
-      type: 'CHAT_MESSAGE',
       chatId,
       content,
-      userId,
-      userName,
-      messageType: type
+      type
     };
 
-    wsRef.current.send(JSON.stringify(messageData));
+    console.log('📤 Dados da mensagem:', messageData);
+    
+    // Removendo a adição local da mensagem, pois ela será adicionada quando recebermos o evento new_message
+    socketRef.current.emit('chat_message', messageData);
     setInputMessage('');
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !wsRef.current || !chatId || wsRef.current.readyState !== WebSocket.OPEN) return;
+    if (!file || !socketRef.current?.connected || !chatId) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const messageData = {
-        type: 'CHAT_MESSAGE',
         chatId,
-        content: e.target?.result,
-        userId,
-        userName,
-        messageType: 'image'
+        content: e.target?.result as string,
+        type: 'image'
       };
-
-      wsRef.current?.send(JSON.stringify(messageData));
+      console.log('📤 Dados da imagem:', messageData);
+      socketRef.current?.emit('chat_message', messageData);
     };
     reader.readAsDataURL(file);
   };
@@ -264,14 +399,28 @@ const ChatModal: React.FC<ChatModalProps> = ({
               <span className="text-sm text-gray-600">
                 {isConnected ? 'Conectado' : 'Desconectado'}
               </span>
+              <span className="text-sm text-gray-600">
+                • Status: {chatStatus === 'open' ? 'Aberto' : 'Fechado'}
+              </span>
             </div>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-full"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex gap-2">
+            {chatStatus === 'open' && (
+              <button
+                onClick={() => chatId && closeChat(chatId)}
+                className="p-2 hover:bg-red-50 rounded-full text-red-600"
+                title="Fechar chat"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            )}
+            <button
+              onClick={handleClose}
+              className="p-2 hover:bg-gray-100 rounded-full"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -332,7 +481,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
               onKeyPress={(e) => e.key === 'Enter' && sendMessage(inputMessage)}
               placeholder="Digite sua mensagem..."
               className="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-              disabled={!isConnected || !chatId}
+              disabled={!isConnected || chatStatus !== 'open'}
             />
             <input
               type="file"
@@ -340,19 +489,19 @@ const ChatModal: React.FC<ChatModalProps> = ({
               accept="image/*"
               className="hidden"
               onChange={(e) => handleImageUpload(e)}
-              disabled={!isConnected || !chatId}
+              disabled={!isConnected || chatStatus !== 'open'}
             />
             <button
               onClick={() => document.getElementById('image-input')?.click()}
               className="p-3 hover:bg-gray-100 rounded-lg disabled:opacity-50 transition-colors"
-              disabled={!isConnected || !chatId}
+              disabled={!isConnected || chatStatus !== 'open'}
             >
               <Paperclip className="w-6 h-6 text-gray-600" />
             </button>
             <button
               onClick={() => sendMessage(inputMessage, 'text')}
               className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
-              disabled={!isConnected || !chatId}
+              disabled={!isConnected || chatStatus !== 'open'}
             >
               <Send className="w-6 h-6" />
             </button>
