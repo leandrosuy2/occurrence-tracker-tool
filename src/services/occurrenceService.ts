@@ -10,7 +10,7 @@ const API_URL = import.meta.env.PROD
 const occurrenceService = {
   createOccurrence: async (formData: FormData) => {
     try {
-      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/save`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences/save`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -49,7 +49,7 @@ const occurrenceService = {
         policeStation_id: 0, // Será definido pelo backend
       };
 
-      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/quick`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences/quick`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -74,7 +74,7 @@ const occurrenceService = {
 
   getUserOccurrences: async () => {
     try {
-      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/self`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences/self`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -94,7 +94,7 @@ const occurrenceService = {
 
   getOccurrenceById: async (id: string) => {
     try {
-      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/${id}`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -114,7 +114,7 @@ const occurrenceService = {
 
   updateOccurrence: async (id: string, formData: FormData) => {
     try {
-      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/${id}`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -139,7 +139,7 @@ const occurrenceService = {
 
   deleteOccurrence: async (id: string) => {
     try {
-      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/${id}`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -162,7 +162,7 @@ const occurrenceService = {
 
   getAllOccurrences: async () => {
     try {
-      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

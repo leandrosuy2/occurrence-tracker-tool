@@ -112,7 +112,7 @@ const PoliceStations = () => {
 
   const fetchStations = async () => {
     try {
-      const response = await api.get(`${basePathUrlApiV1}/policeStation`);
+      const response = await api.get(`${basePathUrlApiV1}/police-stations`);
       setStations(response.data);
       setMarkers(response.data);
     } catch (error) {
@@ -137,7 +137,7 @@ const PoliceStations = () => {
         longitude: data.longitude,
       };
 
-      await api.put(`${basePathUrlApiV1}/policeStation/${id}`, payload);
+      await api.put(`${basePathUrlApiV1}/police-stations/${id}`, payload);
       toast.success('Delegacia atualizada com sucesso!');
       setDialogOpen(false);
       reset();
@@ -161,7 +161,7 @@ const PoliceStations = () => {
           latitude: data.latitude,
           longitude: data.longitude,
         };
-        await api.post(`${basePathUrlApiV1}/policeStation/save`, payload);
+        await api.post(`${basePathUrlApiV1}/police-stations/save`, payload);
         toast.success('Delegacia criada com sucesso!');
         setDialogOpen(false);
         reset();
@@ -192,7 +192,7 @@ const PoliceStations = () => {
     if (!stationToDelete) return;
     
     try {
-      await api.delete(`${basePathUrlApiV1}/policeStation/${stationToDelete}`);
+      await api.delete(`${basePathUrlApiV1}/police-stations/${stationToDelete}`);
       toast.success('Delegacia excluída com sucesso!');
       fetchStations();
     } catch (error) {

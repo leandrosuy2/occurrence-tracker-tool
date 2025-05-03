@@ -152,7 +152,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchMarkers = async () => {
       try {
-        const response = await api.get(`${basePathUrlApiV1}/policeStation`);
+        const response = await api.get(`${basePathUrlApiV1}/police-stations`);
         setMarkers(response.data);
       } catch (error) {
         console.error('Error fetching markers:', error);
@@ -502,6 +502,7 @@ const Dashboard: React.FC = () => {
         occurrenceId={selectedOccurrenceId || ''}
         userId={currentUser?.id || ''}
         token={currentToken}
+        userName={currentUser?.name || ''}
       />
     </div>
   );
