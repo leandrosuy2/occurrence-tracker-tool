@@ -3,11 +3,14 @@ import { Occurrence, CreateOccurrenceDTO } from '@/types';
 import { OccurrenceType } from '@/components/OccurrenceTypeModal';
 
 const basePathUrlApiV1 = '/api/v1';
+const API_URL = import.meta.env.PROD 
+  ? 'https://api.belemsistemas.com'
+  : import.meta.env.VITE_API_URL;
 
 const occurrenceService = {
   createOccurrence: async (formData: FormData) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/save`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/save`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -46,7 +49,7 @@ const occurrenceService = {
         policeStation_id: 0, // Será definido pelo backend
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/quick`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/quick`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -71,7 +74,7 @@ const occurrenceService = {
 
   getUserOccurrences: async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/self`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/self`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -91,7 +94,7 @@ const occurrenceService = {
 
   getOccurrenceById: async (id: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/${id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -111,7 +114,7 @@ const occurrenceService = {
 
   updateOccurrence: async (id: string, formData: FormData) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -136,7 +139,7 @@ const occurrenceService = {
 
   deleteOccurrence: async (id: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -159,7 +162,7 @@ const occurrenceService = {
 
   getAllOccurrences: async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}${basePathUrlApiV1}/ocurrences`, {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/occurrences`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -173,6 +176,31 @@ const occurrenceService = {
     } catch (error) {
       console.error('Get all occurrences error:', error);
       toast.error("Erro ao buscar todas as ocorrências.");
+      throw error;
+    }
+  },
+
+  sendNotification: async (occurrenceId: string) => {
+    try {
+      const response = await fetch(`${API_URL}${basePathUrlApiV1}/notifications/occurrence/${occurrenceId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: "Nova atualização na ocorrência: A situação está sendo monitorada pela polícia"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send notification');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      toast.error('Erro ao enviar notificação');
       throw error;
     }
   }

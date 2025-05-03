@@ -37,9 +37,14 @@ const ChangeView: React.FC<{ center: [number, number]; zoom: number }> = ({ cent
 };
 
 // Componente para o ícone personalizado
-const CustomIcon: React.FC<{ type: OccurrenceType; isCurrentLocation?: boolean }> = ({ type, isCurrentLocation }) => {
+const CustomIcon: React.FC<{ type: OccurrenceType; isCurrentLocation?: boolean; isPoliceStation?: boolean }> = ({ 
+  type, 
+  isCurrentLocation,
+  isPoliceStation 
+}) => {
   const getIconColor = () => {
     if (isCurrentLocation) return '#3b82f6'; // Azul para localização atual
+    if (isPoliceStation) return '#10b981'; // Verde para delegacias
     switch (type) {
       case 'HOMICIDIO':
       case 'LATROCINIO':
@@ -54,6 +59,7 @@ const CustomIcon: React.FC<{ type: OccurrenceType; isCurrentLocation?: boolean }
 
   const getIcon = () => {
     if (isCurrentLocation) return <MapPin className="w-6 h-6" />;
+    if (isPoliceStation) return <Shield className="w-6 h-6" />;
     switch (type) {
       case 'HOMICIDIO':
       case 'LATROCINIO':
@@ -289,9 +295,6 @@ const Map: React.FC<MapProps> = ({
                 <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: ${occurrence.type === 'HOMICIDIO' || occurrence.type === 'LATROCINIO' ? '#ef4444' :
                   occurrence.type === 'ROUBOS_E_FURTOS' || occurrence.type === 'ASSALTO_A_MAO_ARMADA' ? '#f59e0b' : '#3b82f6'
                 }"></div>
-                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: ${occurrence.type === 'HOMICIDIO' || occurrence.type === 'LATROCINIO' ? '#ef4444' :
-                  occurrence.type === 'ROUBOS_E_FURTOS' || occurrence.type === 'ASSALTO_A_MAO_ARMADA' ? '#f59e0b' : '#3b82f6'
-                }"></div>
               </div>`,
               iconSize: [40, 40],
               iconAnchor: [20, 20]
@@ -333,12 +336,15 @@ const Map: React.FC<MapProps> = ({
             icon={L.divIcon({
               className: 'custom-marker',
               html: `<div class="relative">
-                <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: #3b82f6">
+                <div class="absolute -translate-x-1/2 -translate-y-1/2" style="color: #10b981">
                   <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/>
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M12 8v4"/>
+                    <path d="M12 16h.01"/>
                   </svg>
                 </div>
-                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: #3b82f6"></div>
+                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-20" style="background-color: #10b981"></div>
+                <div class="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full opacity-10 animate-ping" style="background-color: #10b981"></div>
               </div>`,
               iconSize: [40, 40],
               iconAnchor: [20, 20]
@@ -347,7 +353,7 @@ const Map: React.FC<MapProps> = ({
             <Popup>
               <div className="p-2">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   <div>
                     <h3 className="font-semibold text-lg">{station.name}</h3>
                     <span className="text-sm text-gray-600">{station.address}</span>

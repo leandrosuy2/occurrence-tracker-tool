@@ -59,7 +59,7 @@ const Permissions: React.FC = () => {
   // Handle edit user role
   const handleEdit = (user: UserType) => {
     setSelectedUser(user);
-    reset({ role: user.role || 'user' });
+    reset({ role: user.role || 'USER' });
     setEditDialogOpen(true);
   };
 
@@ -73,9 +73,11 @@ const Permissions: React.FC = () => {
   // Get role badge based on user role
   const getRoleBadge = (role?: string) => {
     switch (role) {
-      case 'admin':
+      case 'SUPERADMIN':
+        return <Badge className="bg-purple-600">Super Admin</Badge>;
+      case 'ADMIN':
         return <Badge className="bg-ocorrencia-azul-escuro">Administrador</Badge>;
-      case 'police':
+      case 'POLICE':
         return <Badge className="bg-ocorrencia-azul-medio">Policial</Badge>;
       default:
         return <Badge variant="outline">Usuário</Badge>;
@@ -169,7 +171,7 @@ const Permissions: React.FC = () => {
                   <Controller
                     name="role"
                     control={control}
-                    defaultValue={selectedUser.role || 'user'}
+                    defaultValue={selectedUser.role || 'USER'}
                     render={({ field }) => (
                       <Select 
                         onValueChange={field.onChange} 
@@ -179,9 +181,10 @@ const Permissions: React.FC = () => {
                           <SelectValue placeholder="Selecione uma função" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="user">Usuário Comum</SelectItem>
-                          <SelectItem value="police">Policial</SelectItem>
-                          <SelectItem value="admin">Administrador</SelectItem>
+                          <SelectItem value="USER">Usuário Comum</SelectItem>
+                          <SelectItem value="POLICE">Policial</SelectItem>
+                          <SelectItem value="ADMIN">Administrador</SelectItem>
+                          <SelectItem value="SUPERADMIN">Super Admin</SelectItem>
                         </SelectContent>
                       </Select>
                     )}

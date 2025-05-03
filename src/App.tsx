@@ -61,6 +61,11 @@ const App = () => {
       console.log('App - Atualizando estado com nova ocorrência');
       setNewOccurrence(event.detail);
       setIsNewOccurrenceModalOpen(true);
+      console.log('App - Estado do modal após atualização:', { 
+        isAdmin, 
+        hasNewOccurrence: !!event.detail, 
+        isModalOpen: true 
+      });
     };
 
     console.log('App - Registrando listener de newOccurrence');
@@ -70,7 +75,7 @@ const App = () => {
       console.log('App - Removendo listener de newOccurrence');
       window.removeEventListener('newOccurrence', handleNewOccurrence as EventListener);
     };
-  }, []);
+  }, [isAdmin]);
 
   const handleAcceptOccurrence = (occurrence: any) => {
     console.log('App - Ocorrência aceita:', occurrence);
@@ -144,7 +149,7 @@ const App = () => {
         </BrowserRouter>
 
         {/* Modal de Nova Ocorrência */}
-        {isAdmin && newOccurrence && (
+        {isAdmin && newOccurrence && isNewOccurrenceModalOpen && (
           <NewOccurrenceModal
             occurrence={newOccurrence}
             onClose={handleCloseNewOccurrenceModal}

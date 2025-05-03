@@ -29,7 +29,8 @@ import {
   MapPin,
   List,
   Filter,
-  MessageCircle
+  MessageCircle,
+  Bell
 } from 'lucide-react';
 import OccurrenceForm from '@/components/OccurrenceForm';
 import Map from '@/components/Map';
@@ -52,6 +53,7 @@ import OccurrencesTable from '@/components/OccurrencesTable';
 import authService from '@/services/authService';
 import { formatOccurrenceType } from '@/utils/occurrenceUtils';
 import ChatModal from '@/components/ChatModal';
+import notificationService from '@/services/notificationService';
 
 const Occurrences: React.FC = () => {
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
@@ -68,6 +70,8 @@ const Occurrences: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'accepted' | 'rejected'>('all');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedOccurrenceForChat, setSelectedOccurrenceForChat] = useState<Occurrence | null>(null);
+  const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
+  const [selectedOccurrenceForNotification, setSelectedOccurrenceForNotification] = useState<Occurrence | null>(null);
   
   const isMobile = useIsMobile();
   const isAdmin = authService.isAdmin();
@@ -205,6 +209,28 @@ const Occurrences: React.FC = () => {
   const handleChatClick = (occurrence: Occurrence) => {
     setSelectedOccurrenceForChat(occurrence);
     setIsChatOpen(true);
+  };
+
+  const handleNotificationClick = (occurrence: Occurrence) => {
+    setSelectedOccurrenceForNotification(occurrence);
+    setIsNotificationDialogOpen(true);
+  };
+
+  const handleSendNotification = async () => {
+    if (!selectedOccurrenceForNotification) return;
+
+    try {
+      await notificationService.sendOccurrenceNotification(
+        selectedOccurrenceForNotification.id,
+        "Nova atualização na ocorrência: A situação está sendo monitorada pela polícia"
+      );
+      toast.success("Notificação enviada com sucesso!");
+      setIsNotificationDialogOpen(false);
+      setSelectedOccurrenceForNotification(null);
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      toast.error('Erro ao enviar notificação');
+    }
   };
 
   const getOccurrenceTypeIcon = (type: string) => {
@@ -376,8 +402,18 @@ const Occurrences: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Total de Ocorrências</CardTitle>
+          {isAdmin && (
+            <Button 
+              variant="outline" 
+              onClick={() => handleNotificationClick(occurrences[0])}
+              disabled={occurrences.length === 0}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Enviar Notificação
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -393,8 +429,9 @@ const Occurrences: React.FC = () => {
               occurrences={filteredOccurrences} 
               onUpdate={fetchData}
               onEdit={handleEditClick}
-              onDelete={(id) => handleDeleteClick(id.toString())}
+              onDelete={handleDeleteClick}
               onChat={handleChatClick}
+              onNotification={handleNotificationClick}
               isAdmin={isAdmin}
             />
           )}
@@ -511,6 +548,27 @@ const Occurrences: React.FC = () => {
               className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Notification Dialog */}
+      <AlertDialog open={isNotificationDialogOpen} onOpenChange={setIsNotificationDialogOpen}>
+        <AlertDialogContent className="max-w-[90vw] md:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enviar Notificação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem certeza que deseja enviar uma notificação sobre esta ocorrência para todos os usuários cadastrados (exceto superadmin)?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col space-y-2 sm:space-y-0 sm:flex-row">
+            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleSendNotification}
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+            >
+              Enviar Notificação
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

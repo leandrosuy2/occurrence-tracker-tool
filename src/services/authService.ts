@@ -2,6 +2,7 @@ import api, { basePathUrlApiV1 } from './api';
 import { jwtDecode } from 'jwt-decode';
 import { User, LoginRequest, RegisterRequest } from '../types';
 import { toast } from "sonner";
+import notificationService from './notificationService';
 
 interface JwtPayload {
   id: string;
@@ -63,6 +64,10 @@ const login = async (data: LoginRequest) => {
     user.role = userData.Permission.role;
     localStorage.setItem('user', JSON.stringify(user));
     
+    // Define o status de admin no serviço de notificações
+    const isAdminUser = user.role === 'ADMIN' || user.role === 'SUPERADMIN';
+    notificationService.setAdminStatus(isAdminUser);
+    
     console.log('User data after login:', user);
     return { token, user };
   } catch (error) {
@@ -72,14 +77,39 @@ const login = async (data: LoginRequest) => {
   }
 };
 
-const register = async (data: RegisterRequest) => {
+const checkCpfExists = async (cpf: string) => {
   try {
-    const response = await api.post('/auth/signup', data);
+    const response = await api.get(`/api/v1/users/check-cpf/${cpf}`);
+    return response.data.exists;
+  } catch (error) {
+    console.error('Error checking CPF:', error);
+    return false;
+  }
+};
+
+const register = async (data: FormData) => {
+  try {
+    // Verifica se o CPF já existe
+    const cpf = data.get('cpf') as string;
+    const cpfExists = await checkCpfExists(cpf);
+    
+    if (cpfExists) {
+      toast.error("CPF já cadastrado no sistema");
+      throw new Error("CPF já cadastrado");
+    }
+
+    const response = await api.post('/api/v1/users/save', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     toast.success("Registro realizado com sucesso!");
     return response.data;
   } catch (error) {
     console.error('Register error:', error);
-    toast.error("Erro ao cadastrar usuário. Verifique os dados informados.");
+    if (error.message !== "CPF já cadastrado") {
+      toast.error("Erro ao cadastrar usuário. Verifique os dados informados.");
+    }
     throw error;
   }
 };
@@ -115,9 +145,17 @@ const isAuthenticated = (): boolean => {
 const isAdmin = (): boolean => {
   const user = getCurrentUser();
   console.log('AuthService - Verificando admin - User:', user);
-  const isAdminUser = user?.role === 'ADMIN';
+  const isAdminUser = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
   console.log('AuthService - Verificando admin - Resultado:', isAdminUser);
   return isAdminUser;
+};
+
+const isSuperAdmin = (): boolean => {
+  const user = getCurrentUser();
+  console.log('AuthService - Verificando superadmin - User:', user);
+  const isSuperAdminUser = user?.role === 'SUPERADMIN';
+  console.log('AuthService - Verificando superadmin - Resultado:', isSuperAdminUser);
+  return isSuperAdminUser;
 };
 
 const changePassword = async (currentPassword: string, newPassword: string) => {
@@ -158,8 +196,10 @@ const authService = {
   getCurrentUser,
   isAuthenticated,
   isAdmin,
+  isSuperAdmin,
   changePassword,
   changeEmail,
+  checkCpfExists,
 };
 
 export default authService;

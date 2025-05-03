@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, MapPin, AlertTriangle, FileText, Eye, ChevronLeft, ChevronRight, Image, X, Download, MessageCircle } from 'lucide-react';
+import { Pencil, Trash2, MapPin, AlertTriangle, FileText, Eye, ChevronLeft, ChevronRight, Image, X, Download, MessageCircle, MoreVertical, Edit, Bell } from 'lucide-react';
 import { Occurrence } from '@/types';
 import {
   Dialog,
@@ -21,6 +21,12 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatOccurrenceType } from '@/utils/occurrenceUtils';
 import authService from '@/services/authService';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface OccurrencesTableProps {
   occurrences: Occurrence[];
@@ -28,6 +34,7 @@ interface OccurrencesTableProps {
   onEdit: (occurrence: Occurrence) => void;
   onDelete: (id: string) => void;
   onChat?: (occurrence: Occurrence) => void;
+  onNotification: (occurrence: Occurrence) => void;
   isAdmin?: boolean;
 }
 
@@ -39,6 +46,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   onEdit,
   onDelete,
   onChat,
+  onNotification,
   isAdmin = false
 }): JSX.Element => {
   const [addresses, setAddresses] = useState<Record<number, string>>({});
@@ -258,6 +266,48 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
     };
   }, [occurrences]);
 
+  const ActionsCell = ({ occurrence, onEdit, onDelete, onChat, onNotification, isAdmin }: { 
+    occurrence: Occurrence; 
+    onEdit: (occurrence: Occurrence) => void;
+    onDelete: (id: string) => void;
+    onChat: (occurrence: Occurrence) => void;
+    onNotification: (occurrence: Occurrence) => void;
+    isAdmin: boolean;
+  }) => {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onChat(occurrence)}>
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Abrir Chat
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onEdit(occurrence)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Editar
+          </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem onClick={() => onNotification(occurrence)}>
+              <Bell className="h-4 w-4 mr-2" />
+              Enviar Notificação
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem 
+            onClick={() => onDelete(occurrence.id)}
+            className="text-red-600"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Excluir
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
   return (
     <>
       <div className="rounded-md border">
@@ -326,6 +376,16 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                         <MessageCircle className="h-4 w-4 text-green-500" />
                       </Button>
                     )}
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onNotification(occurrence)}
+                        className="hover:bg-yellow-100 dark:hover:bg-yellow-900"
+                      >
+                        <Bell className="h-4 w-4 text-yellow-500" />
+                      </Button>
+                    )}
                     {!isAdmin && (
                       <>
                         <Button
@@ -334,7 +394,15 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                           onClick={() => onEdit(occurrence)}
                           className="hover:bg-yellow-100 dark:hover:bg-yellow-900"
                         >
-                          <Pencil className="h-4 w-4 text-yellow-500" />
+                          <Edit className="h-4 w-4 text-yellow-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDelete(occurrence.id)}
+                          className="hover:bg-red-100 dark:hover:bg-red-900"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </>
                     )}

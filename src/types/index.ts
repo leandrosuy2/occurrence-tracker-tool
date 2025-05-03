@@ -7,6 +7,14 @@ export interface User {
   cpf: string;
   avatar?: string;
   role?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  isAdmin?: boolean;
 }
 
 export interface AuthState {

@@ -7,17 +7,20 @@ import { basePathUrlApiV1 } from '@/services/api';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  requireSuperAdmin?: boolean;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  requireAdmin = false 
+  requireAdmin = false,
+  requireSuperAdmin = false
 }) => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [isValid, setIsValid] = useState(false);
   const isAuthenticated = authService.isAuthenticated();
   const isAdmin = authService.isAdmin();
+  const isSuperAdmin = authService.isSuperAdmin();
 
   useEffect(() => {
     const validateToken = async () => {
@@ -48,6 +51,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (!isAuthenticated || !isValid) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requireSuperAdmin && !isSuperAdmin) {
+    return <Navigate to="/" replace />;
   }
 
   if (requireAdmin && !isAdmin) {

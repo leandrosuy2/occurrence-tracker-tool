@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Home, FileText, MapPin, Users, Shield } from 'lucide-react';
+import { Home, FileText, MapPin, Users, Shield, LayoutDashboard } from 'lucide-react';
 import authService from '@/services/authService';
 
 interface SidebarProps {
@@ -10,6 +10,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -18,8 +19,11 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       if (user) {
         console.log('Sidebar - Dados do usuário:', user);
         const adminStatus = authService.isAdmin();
+        const superAdminStatus = authService.isSuperAdmin();
         console.log('Sidebar - Status de admin:', adminStatus);
+        console.log('Sidebar - Status de superadmin:', superAdminStatus);
         setIsAdmin(adminStatus);
+        setIsSuperAdmin(superAdminStatus);
       }
     };
 
@@ -36,19 +40,16 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   }, [user]);
 
   return (
-    <div className={cn(
-      "w-64 bg-ocorrencia-azul-escuro text-white flex flex-col h-full",
-      className
-    )}>
-      <div className="flex justify-center p-4">
+    <div className={cn("flex flex-col h-full bg-ocorrencia-azul-escuro text-white", className)}>
+      <div className="p-4 border-b border-ocorrencia-azul-medio/30 flex items-center justify-center">
         <img 
           src="/logo.png" 
           alt="Logo Vigilantes" 
-          className="w-auto md:w-48 sm:w-32"
+          className="h-8 w-auto"
         />
       </div>
       
-      <nav className="flex-1 px-4 py-2 space-y-1">
+      <nav className="flex-1 space-y-1 p-4">
         <NavLink
           to="/"
           className={({ isActive }) =>
@@ -60,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
             )
           }
         >
-          <Home className="mr-3 h-5 w-5" />
+          <LayoutDashboard className="mr-3 h-5 w-5" />
           <span>Dashboard</span>
         </NavLink>
         
@@ -79,23 +80,25 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           <span>Ocorrências</span>
         </NavLink>
         
-        {isAdmin && (
+        {(isAdmin || isSuperAdmin) && (
+          <NavLink
+            to="/delegacias"
+            className={({ isActive }) =>
+              cn(
+                "flex items-center px-4 py-2 rounded-md transition-colors",
+                isActive
+                  ? "bg-ocorrencia-azul-medio text-white"
+                  : "text-gray-300 hover:bg-ocorrencia-azul-medio/40 hover:text-white"
+              )
+            }
+          >
+            <MapPin className="mr-3 h-5 w-5" />
+            <span>Delegacias</span>
+          </NavLink>
+        )}
+        
+        {isSuperAdmin && (
           <>
-            <NavLink
-              to="/delegacias"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center px-4 py-2 rounded-md transition-colors",
-                  isActive
-                    ? "bg-ocorrencia-azul-medio text-white"
-                    : "text-gray-300 hover:bg-ocorrencia-azul-medio/40 hover:text-white"
-                )
-              }
-            >
-              <MapPin className="mr-3 h-5 w-5" />
-              <span>Delegacias</span>
-            </NavLink>
-            
             <NavLink
               to="/usuarios"
               className={({ isActive }) =>

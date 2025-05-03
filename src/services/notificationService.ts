@@ -1,17 +1,62 @@
-import { toast } from "sonner";
+import { io, Socket } from 'socket.io-client';
+import { toast } from 'sonner';
 import { Occurrence } from "@/types";
+import { getAdminStatus } from './adminStatus';
+
+const basePathUrlApiV1 = '/api/v1';
+const API_URL = import.meta.env.PROD 
+  ? 'https://api.belemsistemas.com'
+  : import.meta.env.VITE_API_URL;
 
 class NotificationService {
+  private socket: Socket | null = null;
+  private static instance: NotificationService;
   private audio: HTMLAudioElement;
   private lastOccurrenceCount: number = 0;
   private notificationSound: string = 'data:audio/wav;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAGDgYtAgAyN+QWaAAihwMWm4G8QQRDiMcCBcH3Cc+CDv/7xA4Tvh9Rz/y8QADBwMWgQAZG/ILNAARQ4GLTcDeIIIhxGOBAuD7hOfBB3/94gcJ3w+o5/5eIAIAAAVwWgQAVQ2ORaIQwEMAJiDg95G4nQL7mQVWI6GwRcfsZAcsKkJvxgxEjzFUgfHoSQ9Qq7KNwqHwuB13MA4a1q/DmBrHgPcmjiGoh//EwC5nGPEmS4RcfkVKOhJf+WOgoxJclFz3kgn//dBA+ya1GhurNn8zb//9NNutNuhz31f////9vt///z+IdAEAAAK4LQIAKobHItEIYCGAExBwe8jcToF9zIKrEdDYIuP2MgOWFSE34wYiR5iqQPj0JIeoVdlG4VD4XA67mAcNa1fhzA1jwHuTRxDUQ//iYBczjHiTJcIuPyKlHQkv/LHQUYkuSi57yQT//uggfZNajQ3Vmz+Zt//+mm3Wm3Q576v////+32///5/EOgAAADVghQAAAAA//uQZAUAB1WI0PZugAAAAAoQwAAAEk3nRd2qAAAAACiDgAAAAAAABCqEEQRLCgwpBGMlJkIz8jKhGvj4k6jzRnqasNKIeoh5gI7BJaC1A1AoNBjJgbyApVS4IDlZgDU5WUAxEKDNmmALHzZp0Fkz1FMTmGFl1FMEyodIavcCAUHDWrKAIA4aa2oCgILEBupZgHvAhEBcZ6joQBxS76AgccrFlczBvKLC0QI2cBoCFvfTDAo7eoOQInqDPBtvrDEZBNYN5xwNwxQRfw8ZQ5wQVLvO8OYU+mHvFLlDh05Mdg7BT6YrRPpCBznMB2r//xKJjyyOh+cImr2/4doscwD6neZjuZR4AgAABYAAAABy1xcdQtxYBYYZdifkUDgzzXaXn98Z0oi9ILU5mBjFANmRwlVJ3/6jYDAmxaiDG3/6xjQQCCKkRb/6kg/wW+kSJ5//rLobkLSiKmqP/0ikJuDaSaSf/6JiLYLEYnW/+kXg1WRVJL/9EmQ1YZIsv/6Qzwy5qk7/+tEU0nkls3/zIUMPKNX/6yZLf+kFgAfgGyLFAUwY//uQZAUABcd5UiNPVXAAAApAAAAAE0VZQKw9ISAAACgAAAAAVQIygIElVrFkBS+Jhi+EAuu+lKAkYUEIsmEAEoMeDmCETMvfSHTGkF5RWH7kz/ESHWPAq/kcCRhqBtMdokPdM7vil7RG98A2sc7zO6ZvTdM7pmOUAZTnJW+NXxqmd41dqJ6mLTXxrPpnV8yreFKfmCKQ8waBnHMTTKn3Iae6xhRUx9PES7LQchy6vRW1g5Lbel//YvKcwdVzXBVdCXaS/3HaMhIYAOAWDIyUUO9JVV8xXlH7K+KrQ0IFP6QVBE2YubYQsB4DvsWG/gRzI9ucdPwFtMwdEKgmgG0A0AEAMDC78AB2AFQSjAAK4AZQBbwEYACCAE8ALIAZgBFACXAI4AV4BCgCXAHcAVYApIA2IB+gC6AIEAMkAbIAyIA9IDMgE8ARoAiw';
   private isAdmin: boolean = false;
 
-  constructor() {
+  private constructor() {
     this.audio = new Audio(this.notificationSound);
+    this.initializeSocket();
+  }
+
+  public static getInstance(): NotificationService {
+    if (!NotificationService.instance) {
+      NotificationService.instance = new NotificationService();
+    }
+    return NotificationService.instance;
+  }
+
+  private initializeSocket() {
+    this.socket = io(API_URL, {
+      auth: {
+        token: localStorage.getItem('token')
+      }
+    });
+
+    this.socket.on('connect', () => {
+      console.log('Conectado ao WebSocket de notificações');
+    });
+
+    this.socket.on('notification', (data) => {
+      console.log('Nova notificação:', data);
+      // Mostrar notificação apenas para usuários comuns
+      if (!getAdminStatus()) {
+        toast.info(data.message, {
+          description: data.title,
+          duration: 5000,
+        });
+      }
+    });
+
+    this.socket.on('error', (error) => {
+      console.error('Erro no WebSocket:', error);
+    });
   }
 
   public setAdminStatus(isAdmin: boolean) {
+    console.log('Definindo status de admin:', isAdmin);
     this.isAdmin = isAdmin;
   }
 
@@ -82,8 +127,24 @@ class NotificationService {
       default: return type;
     }
   }
+
+  public sendOccurrenceNotification(occurrenceId: string, message: string) {
+    return fetch(`http://localhost:3000/api/v1/notifications/ocurrence/${occurrenceId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ message })
+    });
+  }
+
+  public disconnect() {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+  }
 }
 
-// Singleton instance
-const notificationService = new NotificationService();
-export default notificationService;
+export default NotificationService.getInstance();

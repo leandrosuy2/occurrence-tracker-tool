@@ -26,6 +26,13 @@ const Profile: React.FC = () => {
     name: '',
     email: '',
     cpf: '',
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    zipCode: '',
     avatar: null as File | null,
     password: '',
   });
@@ -41,6 +48,8 @@ const Profile: React.FC = () => {
     confirmEmail: '',
   });
 
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -51,6 +60,13 @@ const Profile: React.FC = () => {
           name: profile.name || '',
           email: profile.email || '',
           cpf: profile.cpf || '',
+          street: profile.street || '',
+          number: profile.number || '',
+          complement: profile.complement || '',
+          neighborhood: profile.neighborhood || '',
+          city: profile.city || '',
+          state: profile.state || '',
+          zipCode: profile.zipCode || '',
           avatar: null,
           password: '',
         });
@@ -69,6 +85,45 @@ const Profile: React.FC = () => {
 
     fetchProfile();
   }, []);
+
+  const fetchAddressByCep = async (cep: string) => {
+    if (cep.length !== 8) return;
+    
+    setIsLoadingCep(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+      
+      if (data.erro) {
+        toast.error("CEP não encontrado");
+        return;
+      }
+
+      setProfileForm(prev => ({
+        ...prev,
+        street: data.logradouro || '',
+        neighborhood: data.bairro || '',
+        city: data.localidade || '',
+        state: data.uf || '',
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      toast.error("Erro ao buscar CEP. Tente novamente.");
+    } finally {
+      setIsLoadingCep(false);
+    }
+  };
+
+  useEffect(() => {
+    if (profileForm.zipCode.length === 8) {
+      fetchAddressByCep(profileForm.zipCode);
+    }
+  }, [profileForm.zipCode]);
+
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+    setProfileForm(prev => ({ ...prev, zipCode: value }));
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -161,9 +216,15 @@ const Profile: React.FC = () => {
       formData.append('name', profileForm.name);
       formData.append('email', profileForm.email);
       formData.append('cpf', removeMask(profileForm.cpf));
+      formData.append('street', profileForm.street);
+      formData.append('number', profileForm.number);
+      formData.append('complement', profileForm.complement);
+      formData.append('neighborhood', profileForm.neighborhood);
+      formData.append('city', profileForm.city);
+      formData.append('state', profileForm.state);
+      formData.append('zipCode', profileForm.zipCode);
       formData.append('password', profileForm.password);
 
-      // Corrigindo o envio do avatar
       if (profileForm.avatar instanceof File) {
         formData.append('avatar', profileForm.avatar);
       }
@@ -379,6 +440,99 @@ const Profile: React.FC = () => {
                         />
                       )}
                     </InputMask>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="zipCode">CEP</Label>
+                    <div className="flex gap-2">
+                      <InputMask
+                        id="zipCode"
+                        name="zipCode"
+                        mask="99999-999"
+                        value={profileForm.zipCode}
+                        onChange={handleCepChange}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        required
+                      />
+                      {isLoadingCep && (
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-ocorrencia-azul-escuro"></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="street">Rua</Label>
+                    <Input
+                      id="street"
+                      name="street"
+                      value={profileForm.street}
+                      onChange={handleProfileChange}
+                      required
+                      disabled={isLoadingCep}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="number">Número</Label>
+                      <Input
+                        id="number"
+                        name="number"
+                        value={profileForm.number}
+                        onChange={handleProfileChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="complement">Complemento</Label>
+                      <Input
+                        id="complement"
+                        name="complement"
+                        value={profileForm.complement}
+                        onChange={handleProfileChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="neighborhood">Bairro</Label>
+                    <Input
+                      id="neighborhood"
+                      name="neighborhood"
+                      value={profileForm.neighborhood}
+                      onChange={handleProfileChange}
+                      required
+                      disabled={isLoadingCep}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Cidade</Label>
+                      <Input
+                        id="city"
+                        name="city"
+                        value={profileForm.city}
+                        onChange={handleProfileChange}
+                        required
+                        disabled={isLoadingCep}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="state">Estado</Label>
+                      <Input
+                        id="state"
+                        name="state"
+                        value={profileForm.state}
+                        onChange={handleProfileChange}
+                        required
+                        disabled={isLoadingCep}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">

@@ -140,11 +140,15 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
     if (occurrence) {
       console.log('NewOccurrenceModal - Modal aberto com ocorrência:', occurrence);
       setIsOpen(true);
+      setTimeLeft(MAX_RESPONSE_TIME); // Reset timer when new occurrence arrives
+    } else {
+      console.log('NewOccurrenceModal - Fechando modal - ocorrência removida');
+      setIsOpen(false);
     }
   }, [occurrence]);
 
   const handleClose = () => {
-    console.log('NewOccurrenceModal - Fechando modal');
+    console.log('NewOccurrenceModal - Fechando modal via handleClose');
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -176,9 +180,12 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
   };
 
   // Não renderiza o modal se não houver ocorrência
-  if (!occurrence) {
+  if (!occurrence || !isOpen) {
+    console.log('NewOccurrenceModal - Não renderizando modal:', { hasOccurrence: !!occurrence, isOpen });
     return null;
   }
+
+  console.log('NewOccurrenceModal - Renderizando modal:', { occurrence, isOpen });
 
   // Calcula a porcentagem do tempo restante para a barra de progresso
   const progressPercentage = (timeLeft / MAX_RESPONSE_TIME) * 100;
