@@ -32,10 +32,10 @@ interface OccurrencesTableProps {
   occurrences: Occurrence[];
   onUpdate: () => void;
   onEdit: (occurrence: Occurrence) => void;
-  onDelete: (id: string) => void;
-  onChat?: (occurrence: Occurrence) => void;
+  onDelete: (id: number) => void;
+  onChat: (occurrence: Occurrence) => void;
   onNotification: (occurrence: Occurrence) => void;
-  isAdmin?: boolean;
+  isAdmin: boolean;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -58,6 +58,12 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0);
+
+  const userRole = authService.getUserRole();
+  const canEditDelete = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
+
+  console.log('User Role:', userRole);
+  console.log('Can Edit Delete:', canEditDelete);
 
   const totalPages = Math.ceil(occurrences.length / ITEMS_PER_PAGE);
   const paginatedOccurrences = occurrences.slice(
@@ -148,6 +154,21 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
         return <Badge variant="outline" className="bg-gray-100 text-gray-700">Outros</Badge>;
       default: 
         return <Badge variant="default">{formatOccurrenceType(type)}</Badge>;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'EM_ABERTO':
+        return <Badge variant="secondary">Em aberto</Badge>;
+      case 'ACEITO':
+        return <Badge variant="default">Aceito</Badge>;
+      case 'ATENDIDO':
+        return <Badge variant="default">Atendido</Badge>;
+      case 'ENCERRADO':
+        return <Badge variant="default">Encerrado</Badge>;
+      default:
+        return <Badge variant="secondary">Em aberto</Badge>;
     }
   };
 
@@ -269,42 +290,45 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   const ActionsCell = ({ occurrence, onEdit, onDelete, onChat, onNotification, isAdmin }: { 
     occurrence: Occurrence; 
     onEdit: (occurrence: Occurrence) => void;
-    onDelete: (id: string) => void;
+    onDelete: (id: number) => void;
     onChat: (occurrence: Occurrence) => void;
     onNotification: (occurrence: Occurrence) => void;
     isAdmin: boolean;
   }) => {
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onChat(occurrence)}>
-            <MessageCircle className="h-4 w-4 mr-2" />
-            Abrir Chat
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onEdit(occurrence)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Editar
-          </DropdownMenuItem>
-          {isAdmin && (
-            <DropdownMenuItem onClick={() => onNotification(occurrence)}>
-              <Bell className="h-4 w-4 mr-2" />
-              Enviar Notificação
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem 
-            onClick={() => onDelete(occurrence.id)}
-            className="text-red-600"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Excluir
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-2">
+        {/* <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onChat(occurrence)}
+          title="Abrir chat"
+        >
+          <MessageCircle className="h-4 w-4" />
+        </Button> */}
+        {isAdmin && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onEdit(occurrence)}
+              // title="Editar ocorrência"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(occurrence.id)}
+              title="Excluir ocorrência"
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+      </div>
     );
   };
 
@@ -386,25 +410,8 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                         <Bell className="h-4 w-4 text-yellow-500" />
                       </Button>
                     )}
-                    {!isAdmin && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEdit(occurrence)}
-                          className="hover:bg-yellow-100 dark:hover:bg-yellow-900"
-                        >
-                          <Edit className="h-4 w-4 text-yellow-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDelete(occurrence.id)}
-                          className="hover:bg-red-100 dark:hover:bg-red-900"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </>
+                    {canEditDelete && (
+                      <ActionsCell occurrence={occurrence} onEdit={onEdit} onDelete={onDelete} onChat={onChat} onNotification={onNotification} isAdmin={isAdmin} />
                     )}
                   </div>
                 </TableCell>
@@ -596,9 +603,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">Status:</span>
-                      <Badge variant={selectedOccurrence.resolved ? "success" : "secondary"}>
-                        {selectedOccurrence.resolved ? 'Resolvido' : 'Em aberto'}
-                      </Badge>
+                      {getStatusBadge(selectedOccurrence.status)}
                     </div>
                   </div>
                 </div>

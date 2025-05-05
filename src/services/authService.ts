@@ -189,6 +189,11 @@ const changeEmail = async (email: string, newEmail: string) => {
   }
 };
 
+const getUserRole = (): string | null => {
+  const user = getCurrentUser();
+  return user?.role || null;
+};
+
 const authService = {
   login,
   register,
@@ -200,6 +205,7 @@ const authService = {
   changePassword,
   changeEmail,
   checkCpfExists,
+  getUserRole,
 };
 
 export default authService;

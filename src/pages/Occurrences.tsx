@@ -64,10 +64,10 @@ const Occurrences: React.FC = () => {
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [selectedOccurrence, setSelectedOccurrence] = useState<Occurrence | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [occurrenceToDelete, setOccurrenceToDelete] = useState<string | null>(null);
+  const [occurrenceToDelete, setOccurrenceToDelete] = useState<number | null>(null);
   const [isMobileListing, setIsMobileListing] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'accepted' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'EM_ABERTO' | 'ACEITO' | 'ATENDIDO' | 'ENCERRADO'>('all');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedOccurrenceForChat, setSelectedOccurrenceForChat] = useState<Occurrence | null>(null);
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
@@ -153,18 +153,7 @@ const Occurrences: React.FC = () => {
 
     // Aplicar filtro de status
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(occ => {
-        switch (statusFilter) {
-          case 'open':
-            return !occ.resolved;
-          case 'accepted':
-            return occ.status === 'accepted';
-          case 'rejected':
-            return occ.status === 'rejected';
-          default:
-            return true;
-        }
-      });
+      filtered = filtered.filter(occ => occ.status === statusFilter);
     }
 
     setFilteredOccurrences(filtered);
@@ -180,7 +169,7 @@ const Occurrences: React.FC = () => {
     setIsFormOpen(true);
   };
 
-  const handleDeleteClick = (occurrenceId: string) => {
+  const handleDeleteClick = (occurrenceId: number) => {
     setOccurrenceToDelete(occurrenceId);
     setIsDeleteDialogOpen(true);
   };
@@ -189,7 +178,7 @@ const Occurrences: React.FC = () => {
     if (!occurrenceToDelete) return;
     
     try {
-      await occurrenceService.deleteOccurrence(occurrenceToDelete);
+      await occurrenceService.deleteOccurrence(occurrenceToDelete.toString());
       toast.success('Ocorrência excluída com sucesso!');
       fetchData();
     } catch (error) {
@@ -257,6 +246,20 @@ const Occurrences: React.FC = () => {
       }
       return [...prev, type];
     });
+  };
+
+  const filterOccurrences = (occ: Occurrence) => {
+    if (statusFilter === 'all') return true;
+    return occ.status === statusFilter;
+  };
+
+  const handleStatusChange = async (occurrenceId: number, newStatus: 'EM_ABERTO' | 'ACEITO' | 'ATENDIDO' | 'ENCERRADO') => {
+    try {
+      await occurrenceService.updateStatus(occurrenceId, newStatus);
+      fetchData();
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
   };
 
   // Mobile card list view for occurrences
@@ -362,22 +365,28 @@ const Occurrences: React.FC = () => {
                 Todas
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
-                checked={statusFilter === 'open'}
-                onCheckedChange={() => setStatusFilter('open')}
+                checked={statusFilter === 'EM_ABERTO'}
+                onCheckedChange={() => setStatusFilter('EM_ABERTO')}
               >
                 Em aberto
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
-                checked={statusFilter === 'accepted'}
-                onCheckedChange={() => setStatusFilter('accepted')}
+                checked={statusFilter === 'ACEITO'}
+                onCheckedChange={() => setStatusFilter('ACEITO')}
               >
                 Aceitas
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
-                checked={statusFilter === 'rejected'}
-                onCheckedChange={() => setStatusFilter('rejected')}
+                checked={statusFilter === 'ATENDIDO'}
+                onCheckedChange={() => setStatusFilter('ATENDIDO')}
               >
-                Recusadas
+                Atendidas
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={statusFilter === 'ENCERRADO'}
+                onCheckedChange={() => setStatusFilter('ENCERRADO')}
+              >
+                Encerradas
               </DropdownMenuCheckboxItem>
               <DropdownMenuSeparator />
               <div className="px-2 py-1.5">
@@ -404,7 +413,7 @@ const Occurrences: React.FC = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Total de Ocorrências</CardTitle>
-          {isAdmin && (
+          {/* {isAdmin && (
             <Button 
               variant="outline" 
               onClick={() => handleNotificationClick(occurrences[0])}
@@ -413,7 +422,7 @@ const Occurrences: React.FC = () => {
               <Bell className="h-4 w-4 mr-2" />
               Enviar Notificação
             </Button>
-          )}
+          )} */}
         </CardHeader>
         <CardContent>
           {loading ? (

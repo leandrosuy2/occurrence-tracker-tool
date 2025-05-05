@@ -15,6 +15,11 @@ export interface User {
   state?: string;
   zipCode?: string;
   isAdmin?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  Permission?: {
+    role: string;
+  };
 }
 
 export interface AuthState {
@@ -54,27 +59,25 @@ export interface Permission {
 }
 
 export interface Occurrence {
-  id: string;
+  id: number;
+  type: string;
   title: string | null;
   description: string | null;
-  type: OccurrenceType;
-  latitude: number;
-  longitude: number;
   date: string;
   time: string;
-  resolved: boolean;
-  status: 'accepted' | 'rejected' | null;
-  user_id: string;
-  policeStation_id: string | null;
-  created_at: string;
-  updated_at: string;
-  photos?: string[];
+  latitude: number;
+  longitude: number;
+  photos: string[];
+  status: 'EM_ABERTO' | 'ACEITO' | 'ATENDIDO' | 'ENCERRADO';
   User?: {
     id: string;
     name: string;
-    avatar: string;
+    email: string;
+    cpf: string;
+    Permission: {
+      role: string;
+    };
   };
-  PoliceStation?: PoliceStation | null;
 }
 
 export interface OccurrenceStats {

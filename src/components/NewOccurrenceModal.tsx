@@ -5,6 +5,7 @@ import { Occurrence } from '@/types';
 import { MapPin, AlertCircle, Clock, Info, Navigation, Calendar, Timer, ArrowRight, Map, AlertTriangle } from 'lucide-react';
 import authService from '@/services/authService';
 import { formatOccurrenceType } from '@/utils/occurrenceUtils';
+import occurrenceService from '@/services/occurrenceService';
 
 interface NewOccurrenceModalProps {
   occurrence: Occurrence | null;
@@ -157,26 +158,38 @@ export const NewOccurrenceModal: React.FC<NewOccurrenceModalProps> = ({
     onClose();
   };
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     console.log('NewOccurrenceModal - Aceitando ocorrência:', occurrence);
     if (occurrence) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
+      try {
+        await occurrenceService.updateStatus(occurrence.id, 'ACEITO');
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+        }
+        onAccept(occurrence);
+        handleClose();
+      } catch (error) {
+        console.error('Erro ao aceitar ocorrência:', error);
       }
-      onAccept(occurrence);
-      handleClose();
     }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     console.log('NewOccurrenceModal - Rejeitando ocorrência');
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+    if (occurrence) {
+      try {
+        await occurrenceService.updateStatus(occurrence.id, 'ENCERRADO');
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+        }
+        onReject();
+        handleClose();
+      } catch (error) {
+        console.error('Erro ao rejeitar ocorrência:', error);
+      }
     }
-    onReject();
-    handleClose();
   };
 
   // Não renderiza o modal se não houver ocorrência

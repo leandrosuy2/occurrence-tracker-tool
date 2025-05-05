@@ -213,18 +213,23 @@ const Profile: React.FC = () => {
 
     try {
       const formData = new FormData();
+      
+      // Campos obrigatórios
       formData.append('name', profileForm.name);
       formData.append('email', profileForm.email);
+      formData.append('password', profileForm.password);
       formData.append('cpf', removeMask(profileForm.cpf));
+      
+      // Campos de endereço
       formData.append('street', profileForm.street);
       formData.append('number', profileForm.number);
-      formData.append('complement', profileForm.complement);
+      formData.append('complement', profileForm.complement || '');
       formData.append('neighborhood', profileForm.neighborhood);
       formData.append('city', profileForm.city);
       formData.append('state', profileForm.state);
       formData.append('zipCode', profileForm.zipCode);
-      formData.append('password', profileForm.password);
 
+      // Adiciona o arquivo de avatar se existir
       if (profileForm.avatar instanceof File) {
         formData.append('avatar', profileForm.avatar);
       }
@@ -430,6 +435,7 @@ const Profile: React.FC = () => {
                       value={profileForm.cpf}
                       onChange={handleProfileChange}
                       required
+                      disabled
                     >
                       {(inputProps: any) => (
                         <Input
@@ -437,6 +443,7 @@ const Profile: React.FC = () => {
                           id="cpf"
                           name="cpf"
                           placeholder="000.000.000-00"
+                          disabled
                         />
                       )}
                     </InputMask>
@@ -453,6 +460,7 @@ const Profile: React.FC = () => {
                         onChange={handleCepChange}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         required
+                        disabled
                       />
                       {isLoadingCep && (
                         <div className="flex items-center">
@@ -470,7 +478,8 @@ const Profile: React.FC = () => {
                       value={profileForm.street}
                       onChange={handleProfileChange}
                       required
-                      disabled={isLoadingCep}
+                      // disabled={isLoadingCep}
+                      disabled
                     />
                   </div>
 
@@ -483,6 +492,7 @@ const Profile: React.FC = () => {
                         value={profileForm.number}
                         onChange={handleProfileChange}
                         required
+                        disabled
                       />
                     </div>
 
@@ -493,6 +503,7 @@ const Profile: React.FC = () => {
                         name="complement"
                         value={profileForm.complement}
                         onChange={handleProfileChange}
+                        disabled
                       />
                     </div>
                   </div>
@@ -505,7 +516,8 @@ const Profile: React.FC = () => {
                       value={profileForm.neighborhood}
                       onChange={handleProfileChange}
                       required
-                      disabled={isLoadingCep}
+                      // disabled={isLoadingCep}
+                      disabled
                     />
                   </div>
 
@@ -518,7 +530,8 @@ const Profile: React.FC = () => {
                         value={profileForm.city}
                         onChange={handleProfileChange}
                         required
-                        disabled={isLoadingCep}
+                        // disabled={isLoadingCep}
+                        disabled
                       />
                     </div>
 
@@ -530,7 +543,8 @@ const Profile: React.FC = () => {
                         value={profileForm.state}
                         onChange={handleProfileChange}
                         required
-                        disabled={isLoadingCep}
+                        // disabled={isLoadingCep}
+                        disabled
                       />
                     </div>
                   </div>

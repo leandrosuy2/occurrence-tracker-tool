@@ -80,7 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           <span>Ocorrências</span>
         </NavLink>
         
-        {(isAdmin || isSuperAdmin) && (
+        {isSuperAdmin && (
           <NavLink
             to="/delegacias"
             className={({ isActive }) =>

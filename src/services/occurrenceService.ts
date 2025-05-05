@@ -92,7 +92,7 @@ const occurrenceService = {
     }
   },
 
-  getOccurrenceById: async (id: string) => {
+  getOccurrenceById: async (id: number) => {
     try {
       const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
         headers: {
@@ -112,7 +112,7 @@ const occurrenceService = {
     }
   },
 
-  updateOccurrence: async (id: string, formData: FormData) => {
+  updateOccurrence: async (id: number, formData: FormData) => {
     try {
       const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
         method: 'PUT',
@@ -137,7 +137,7 @@ const occurrenceService = {
     }
   },
 
-  deleteOccurrence: async (id: string) => {
+  deleteOccurrence: async (id: number) => {
     try {
       const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences/${id}`, {
         method: 'DELETE',
@@ -201,6 +201,31 @@ const occurrenceService = {
     } catch (error) {
       console.error('Error sending notification:', error);
       toast.error('Erro ao enviar notificação');
+      throw error;
+    }
+  },
+
+  updateStatus: async (id: number, status: 'EM_ABERTO' | 'ACEITO' | 'ATENDIDO' | 'ENCERRADO' | 'REJEITADO') => {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/ocurrences/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update occurrence status');
+      }
+
+      const data = await response.json();
+      toast.success("Status da ocorrência atualizado com sucesso!");
+      return data;
+    } catch (error) {
+      console.error('Error updating occurrence status:', error);
+      toast.error('Erro ao atualizar status da ocorrência');
       throw error;
     }
   }

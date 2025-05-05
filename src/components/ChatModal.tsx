@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Send, Paperclip, AlertCircle } from 'lucide-react';
+import { X, Send, Paperclip, AlertCircle, Bell } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import occurrenceService from '@/services/occurrenceService';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -29,6 +31,7 @@ interface ChatModalProps {
   userId: string;
   token: string;
   userName: string;
+  onStatusChange?: (status: 'EM_ABERTO' | 'ACEITO' | 'ATENDIDO' | 'ENCERRADO') => void;
 }
 
 const ChatModal: React.FC<ChatModalProps> = ({
@@ -37,7 +40,8 @@ const ChatModal: React.FC<ChatModalProps> = ({
   occurrenceId,
   userId,
   token,
-  userName
+  userName,
+  onStatusChange
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(isOpen);
   const socketRef = useRef<Socket | null>(null);
@@ -47,7 +51,9 @@ const ChatModal: React.FC<ChatModalProps> = ({
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [chatStatus, setChatStatus] = useState<'open' | 'closed'>('open');
+  const [chatStatus, setChatStatus] = useState<'EM_ABERTO' | 'ACEITO' | 'ATENDIDO' | 'ENCERRADO'>('EM_ABERTO');
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [lastMessageTime, setLastMessageTime] = useState<number>(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -80,7 +86,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
   const loadChatHistory = async (chatId: string) => {
     try {
       console.log('📚 Carregando histórico do chat:', chatId);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chats/${chatId}/messages`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/chats/${chatId}/messages`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -159,6 +165,13 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
       socket.on('new_message', (message) => {
         console.log('📩 Nova mensagem recebida:', message);
+        
+        // Verificar se a mensagem é de outro usuário e o modal está fechado
+        if (message.user_id !== userId && !isModalOpen) {
+          setHasUnreadMessages(true);
+          setLastMessageTime(Date.now());
+        }
+
         setMessages(prev => {
           // Verifica se a mensagem já existe
           if (prev.some(m => m.id === message.id)) {
@@ -191,7 +204,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
       });
 
       socket.on('chat_closed', () => {
-        setChatStatus('closed');
+        setChatStatus('ENCERRADO');
         setError('Este chat foi fechado');
         setIsConnected(false);
         if (socketRef.current) {
@@ -210,7 +223,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
     try {
       console.log('🔍 Verificando status do chat:', chatId);
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/v1/chats/${chatId}/status`,
+        `${import.meta.env.VITE_API_URL}/api/v1/chat/chats/${chatId}/status`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -225,13 +238,14 @@ const ChatModal: React.FC<ChatModalProps> = ({
       const data = await response.json();
       console.log('📊 Status do chat:', data);
       
-      // Atualiza o status do chat baseado no isResolved
-      const status = data.isResolved ? 'closed' : 'open';
-      setChatStatus(status);
+      // Atualiza o status do chat com base no status da ocorrência
+      if (data.chat?.ocurrence?.status) {
+        setChatStatus(data.chat.ocurrence.status);
+      }
       
-      // Se o chat estiver fechado, desconecta
-      if (status === 'closed') {
-        console.log('❌ Chat está fechado, desconectando...');
+      // Se o chat estiver encerrado, desconecta
+      if (data.chat?.ocurrence?.status === 'ENCERRADO') {
+        console.log('❌ Chat está encerrado, desconectando...');
         setIsConnected(false);
         if (socketRef.current) {
           socketRef.current.disconnect();
@@ -257,7 +271,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
         throw new Error('Erro ao fechar o chat');
       }
 
-      setChatStatus('closed');
+      setChatStatus('ENCERRADO');
       setError('Chat fechado com sucesso');
       setIsConnected(false);
       if (socketRef.current) {
@@ -275,7 +289,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
       try {
         console.log('🚀 Inicializando chat...');
         const apiUrl = import.meta.env.VITE_API_URL;
-        const url = `${apiUrl}/api/v1/ocurrences/${occurrenceId}/chat`;
+        const url = `${apiUrl}/api/v1/chat/ocurrences/${occurrenceId}/chat`;
         console.log('📡 Fazendo requisição para:', url);
         console.log('🔑 Token:', token ? 'Presente' : 'Ausente');
         
@@ -301,15 +315,18 @@ const ChatModal: React.FC<ChatModalProps> = ({
         
         let newChatId: string;
         
-        if (response.status === 201) {
-          // Caso de criação de novo chat
+        if (data.id) {
+          // Caso de criação de novo chat ou chat existente com ID direto
           newChatId = data.id;
-        } else {
-          // Caso de chat existente
-          if (!data.chat || !data.chat.id) {
-            throw new Error('ID do chat não encontrado na resposta');
-          }
+        } else if (data.chat?.id) {
+          // Caso de chat existente no formato { chat: { id: ... } }
           newChatId = data.chat.id;
+        } else if (typeof data === 'string') {
+          // Caso onde o ID é retornado diretamente como string
+          newChatId = data;
+        } else {
+          console.error('Formato de resposta inesperado:', data);
+          throw new Error('ID do chat não encontrado na resposta');
         }
 
         console.log('📝 Chat ID:', newChatId);
@@ -317,14 +334,16 @@ const ChatModal: React.FC<ChatModalProps> = ({
         setChatId(newChatId);
         
         // Primeiro verificar o status do chat
-        await checkChatStatus(newChatId);
-        
-        // Carregar histórico antes de estabelecer a conexão
-        await loadChatHistory(newChatId);
-        
-        // Estabelecer a conexão
-        console.log('🔄 Estabelecendo conexão...');
-        await establishSocketConnection(newChatId);
+        if (newChatId) {
+          await checkChatStatus(newChatId);
+          // Carregar histórico antes de estabelecer a conexão
+          await loadChatHistory(newChatId);
+          // Estabelecer a conexão
+          console.log('🔄 Estabelecendo conexão...');
+          await establishSocketConnection(newChatId);
+        } else {
+          throw new Error('Chat ID inválido');
+        }
       } catch (error) {
         console.error('💥 Erro ao inicializar chat:', error);
         setError('Erro ao inicializar o chat');
@@ -347,9 +366,13 @@ const ChatModal: React.FC<ChatModalProps> = ({
     };
   }, [isOpen, occurrenceId, token]);
 
+  const isChatActive = () => {
+    return chatStatus === 'EM_ABERTO' || chatStatus === 'ACEITO';
+  };
+
   const sendMessage = (content: string, type: 'text' | 'image' = 'text') => {
-    if (!socketRef.current?.connected || !chatId) {
-      console.log('❌ Socket.IO não está conectado!');
+    if (!socketRef.current?.connected || !chatId || !isChatActive()) {
+      console.log('❌ Socket.IO não está conectado ou chat não está ativo!');
       return;
     }
 
@@ -364,14 +387,13 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
     console.log('📤 Dados da mensagem:', messageData);
     
-    // Removendo a adição local da mensagem, pois ela será adicionada quando recebermos o evento new_message
     socketRef.current.emit('chat_message', messageData);
     setInputMessage('');
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !socketRef.current?.connected || !chatId) return;
+    if (!file || !socketRef.current?.connected || !chatId || !isChatActive()) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -385,6 +407,43 @@ const ChatModal: React.FC<ChatModalProps> = ({
     };
     reader.readAsDataURL(file);
   };
+
+  const handleStatusChange = async (newStatus: 'EM_ABERTO' | 'ACEITO' | 'ATENDIDO' | 'ENCERRADO') => {
+    try {
+      await occurrenceService.updateStatus(parseInt(occurrenceId), newStatus);
+      setChatStatus(newStatus);
+      if (onStatusChange) {
+        onStatusChange(newStatus);
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (!isModalOpen && hasUnreadMessages) {
+      // Mostrar notificação quando houver mensagens não lidas e o modal estiver fechado
+      toast('Nova mensagem no chat', {
+        icon: <Bell className="w-5 h-5 text-blue-500" />,
+        duration: 5000,
+        position: 'bottom-right',
+        action: {
+          label: 'Abrir',
+          onClick: () => {
+            setIsModalOpen(true);
+            setHasUnreadMessages(false);
+          }
+        }
+      });
+    }
+  }, [hasUnreadMessages, isModalOpen]);
+
+  // Resetar notificações quando o modal for aberto
+  useEffect(() => {
+    if (isModalOpen) {
+      setHasUnreadMessages(false);
+    }
+  }, [isModalOpen]);
 
   if (!isModalOpen) return null;
 
@@ -400,12 +459,12 @@ const ChatModal: React.FC<ChatModalProps> = ({
                 {isConnected ? 'Conectado' : 'Desconectado'}
               </span>
               <span className="text-sm text-gray-600">
-                • Status: {chatStatus === 'open' ? 'Aberto' : 'Fechado'}
+                • Status: {chatStatus === 'EM_ABERTO' ? 'Aberto' : chatStatus === 'ACEITO' ? 'Aceito' : chatStatus === 'ATENDIDO' ? 'Atendido' : 'Encerrado'}
               </span>
             </div>
           </div>
           <div className="flex gap-2">
-            {chatStatus === 'open' && (
+            {chatStatus === 'EM_ABERTO' && (
               <button
                 onClick={() => chatId && closeChat(chatId)}
                 className="p-2 hover:bg-red-50 rounded-full text-red-600"
@@ -481,7 +540,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
               onKeyPress={(e) => e.key === 'Enter' && sendMessage(inputMessage)}
               placeholder="Digite sua mensagem..."
               className="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-              disabled={!isConnected || chatStatus !== 'open'}
+              disabled={!isConnected || !isChatActive()}
             />
             <input
               type="file"
@@ -489,19 +548,19 @@ const ChatModal: React.FC<ChatModalProps> = ({
               accept="image/*"
               className="hidden"
               onChange={(e) => handleImageUpload(e)}
-              disabled={!isConnected || chatStatus !== 'open'}
+              disabled={!isConnected || !isChatActive()}
             />
             <button
               onClick={() => document.getElementById('image-input')?.click()}
               className="p-3 hover:bg-gray-100 rounded-lg disabled:opacity-50 transition-colors"
-              disabled={!isConnected || chatStatus !== 'open'}
+              disabled={!isConnected || !isChatActive()}
             >
               <Paperclip className="w-6 h-6 text-gray-600" />
             </button>
             <button
               onClick={() => sendMessage(inputMessage, 'text')}
               className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
-              disabled={!isConnected || chatStatus !== 'open'}
+              disabled={!isConnected || !isChatActive()}
             >
               <Send className="w-6 h-6" />
             </button>

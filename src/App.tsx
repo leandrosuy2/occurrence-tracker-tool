@@ -131,7 +131,7 @@ const App = () => {
               } />
               
               <Route path="delegacias" element={
-                <ProtectedRoute requireAdmin={true}>
+                <ProtectedRoute requireSuperAdmin={true}>
                   <PoliceStations />
                 </ProtectedRoute>
               } />

@@ -39,6 +39,16 @@ const getUserProfile = async (): Promise<User> => {
 
 const updateUser = async (id: string, data: FormData): Promise<User> => {
   try {
+    // Ensure required fields are present
+    if (!data.get('name') || !data.get('email') || !data.get('cpf')) {
+      throw new Error('Campos obrigatórios não preenchidos');
+    }
+
+    // If password is not provided, use a placeholder
+    if (!data.get('password')) {
+      data.append('password', 'placeholder');
+    }
+
     const response = await api.put(`${basePathUrlApiV1}/users/${id}`, data, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -97,6 +107,22 @@ const createUser = async (data: FormData): Promise<User> => {
   }
 };
 
+const createRiskGroupUser = async (formData: FormData): Promise<User> => {
+  try {
+    const response = await api.post(`${basePathUrlApiV1}/users/grupo-de-risco`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    toast.success("Grupo de risco criado com sucesso.");
+    return response.data;
+  } catch (error) {
+    console.error('Create risk group user error:', error);
+    toast.error("Erro ao criar grupo de risco.");
+    throw error;
+  }
+};
+
 const deleteUser = async (id: string): Promise<void> => {
   try {
     await api.delete(`${basePathUrlApiV1}/users/${id}`);
@@ -127,6 +153,7 @@ const userService = {
   updateSelf,
   updateUserRole,
   createUser,
+  createRiskGroupUser,
   deleteUser,
   deleteSelf
 };
