@@ -114,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
               <span>Usuários</span>
             </NavLink>
             
-            <NavLink
+            {/* <NavLink
               to="/permissoes"
               className={({ isActive }) =>
                 cn(
@@ -127,7 +127,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
             >
               <Shield className="mr-3 h-5 w-5" />
               <span>Permissões</span>
-            </NavLink>
+            </NavLink> */}
           </>
         )}
       </nav>

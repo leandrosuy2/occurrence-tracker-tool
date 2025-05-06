@@ -110,18 +110,7 @@ const Register: React.FC = () => {
       toast.error("CPF deve ter 11 dígitos");
       return false;
     }
-
-    try {
-      const cpfExists = await authService.checkCpfExists(formData.cpf);
-      if (cpfExists) {
-        toast.error("CPF já cadastrado no sistema");
-        return false;
-      }
-      return true;
-    } catch (error) {
-      console.error('Error checking CPF:', error);
-      return false;
-    }
+    return true;
   };
 
   const validateStep2 = () => {

@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { formatOccurrenceType } from '@/utils/occurrenceUtils';
 import { connectNotificationWebSocket, disconnectNotificationWebSocket } from '@/services/notificationWebSocket';
 import notificationService from '@/services/notificationService';
+import { useNavigate } from 'react-router-dom';
 
 interface Notification {
   id: string;
@@ -33,6 +34,7 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const navigate = useNavigate();
 
   // Inicializa o elemento de áudio
   useEffect(() => {
@@ -138,6 +140,11 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
     setUnreadCount(0);
   };
 
+  const handleNotificationClick = (notificationId: string) => {
+    markAsRead(notificationId);
+    navigate('/ocorrencias');
+  };
+
   return (
     <DropdownMenu onOpenChange={handleDropdownOpen}>
       <DropdownMenuTrigger asChild>
@@ -179,7 +186,7 @@ const NotificationButton: React.FC<NotificationButtonProps> = ({ isAdmin }) => {
                 className={`flex flex-col items-start p-4 ${
                   !notification.read ? 'bg-muted/50' : ''
                 }`}
-                onClick={() => markAsRead(notification.id)}
+                onClick={() => handleNotificationClick(notification.id)}
               >
                 <div className="flex items-center justify-between w-full">
                   <span className="font-medium">{notification.title}</span>

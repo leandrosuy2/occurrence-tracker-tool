@@ -10,6 +10,12 @@ const API_URL = import.meta.env.PROD
 const occurrenceService = {
   createOccurrence: async (formData: FormData) => {
     try {
+      // Log para verificar o conteúdo do FormData
+      console.log('FormData antes de enviar:');
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + (pair[1] instanceof File ? `File: ${(pair[1] as File).name}` : pair[1]));
+      }
+
       const response = await fetch(`${API_URL}${basePathUrlApiV1}/ocurrences/save`, {
         method: 'POST',
         headers: {

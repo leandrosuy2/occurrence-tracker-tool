@@ -77,27 +77,8 @@ const login = async (data: LoginRequest) => {
   }
 };
 
-const checkCpfExists = async (cpf: string) => {
-  try {
-    const response = await api.get(`/api/v1/users/check-cpf/${cpf}`);
-    return response.data.exists;
-  } catch (error) {
-    console.error('Error checking CPF:', error);
-    return false;
-  }
-};
-
 const register = async (data: FormData) => {
   try {
-    // Verifica se o CPF já existe
-    const cpf = data.get('cpf') as string;
-    const cpfExists = await checkCpfExists(cpf);
-    
-    if (cpfExists) {
-      toast.error("CPF já cadastrado no sistema");
-      throw new Error("CPF já cadastrado");
-    }
-
     const response = await api.post('/api/v1/users/save', data, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -107,7 +88,9 @@ const register = async (data: FormData) => {
     return response.data;
   } catch (error) {
     console.error('Register error:', error);
-    if (error.message !== "CPF já cadastrado") {
+    if (error.response && error.response.data && error.response.data.message === "User with this email already exists") {
+      toast.error("Este email já está cadastrado no sistema.");
+    } else {
       toast.error("Erro ao cadastrar usuário. Verifique os dados informados.");
     }
     throw error;
@@ -204,7 +187,6 @@ const authService = {
   isSuperAdmin,
   changePassword,
   changeEmail,
-  checkCpfExists,
   getUserRole,
 };
 
