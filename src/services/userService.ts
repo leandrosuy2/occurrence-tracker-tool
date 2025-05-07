@@ -100,9 +100,13 @@ const createUser = async (data: FormData): Promise<User> => {
     });
     toast.success("Usuário criado com sucesso!");
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create user error:', error);
-    toast.error("Erro ao criar usuário.");
+    
+    if (error.response?.data?.message === 'CPF já cadastrado') {
+      throw new Error('Este CPF já está cadastrado no sistema');
+    }
+    
     throw error;
   }
 };

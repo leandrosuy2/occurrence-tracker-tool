@@ -170,9 +170,10 @@ const Users: React.FC = () => {
       
       resetForm();
       fetchUsers();
-    } catch (error) {
+      toast.success(editingId ? 'Usuário atualizado com sucesso' : 'Usuário criado com sucesso');
+    } catch (error: any) {
       console.error('Error saving user:', error);
-      toast.error('Erro ao salvar usuário');
+      toast.error(error.message || (editingId ? 'Erro ao atualizar usuário' : 'Erro ao criar usuário'));
     }
   };
   
