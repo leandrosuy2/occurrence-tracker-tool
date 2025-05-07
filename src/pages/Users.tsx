@@ -133,26 +133,33 @@ const Users: React.FC = () => {
     formDataObj.append('cpf', formData.cpfUnformatted);
     formDataObj.append('role', formData.role);
     
-    if (formData.avatar) {
-      formDataObj.append('avatar', formData.avatar);
+    if (editingId) {
+      if (formData.password && formData.password !== 'placeholder') {
+        formDataObj.append('password', formData.password);
+      }
+    } else {
+      formDataObj.append('password', formData.password || 'placeholder');
+      
+      if (formData.avatar) {
+        formDataObj.append('avatar', formData.avatar);
+      }
+      
+      if (formData.documentPhoto) {
+        formDataObj.append('documentPhoto', formData.documentPhoto);
+      }
+      
+      if (formData.documentSelfie) {
+        formDataObj.append('documentSelfie', formData.documentSelfie);
+      }
+      
+      formDataObj.append('street', formData.street);
+      formDataObj.append('number', formData.number);
+      formDataObj.append('complement', formData.complement);
+      formDataObj.append('neighborhood', formData.neighborhood);
+      formDataObj.append('city', formData.city);
+      formDataObj.append('state', formData.state);
+      formDataObj.append('zipCode', formData.zipCodeUnformatted);
     }
-    
-    if (formData.documentPhoto) {
-      formDataObj.append('documentPhoto', formData.documentPhoto);
-    }
-    
-    if (formData.documentSelfie) {
-      formDataObj.append('documentSelfie', formData.documentSelfie);
-    }
-    
-    formDataObj.append('password', formData.password || 'placeholder');
-    formDataObj.append('street', formData.street);
-    formDataObj.append('number', formData.number);
-    formDataObj.append('complement', formData.complement);
-    formDataObj.append('neighborhood', formData.neighborhood);
-    formDataObj.append('city', formData.city);
-    formDataObj.append('state', formData.state);
-    formDataObj.append('zipCode', formData.zipCodeUnformatted);
     
     try {
       if (editingId) {
@@ -513,7 +520,7 @@ const Users: React.FC = () => {
           </p>
         </div>
         
-        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <Dialog open={openDialog && !editingId} onOpenChange={setOpenDialog}>
           <DialogTrigger asChild>
             <Button className="bg-ocorrencia-azul-escuro hover:bg-ocorrencia-azul-medio">
               <UserPlus className="mr-2 h-4 w-4" />
@@ -523,9 +530,7 @@ const Users: React.FC = () => {
           
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>
-                {editingId ? 'Editar Usuário' : 'Criar Novo Usuário'}
-              </DialogTitle>
+              <DialogTitle>Criar Novo Usuário</DialogTitle>
             </DialogHeader>
             
             <form onSubmit={handleSubmit}>
@@ -544,13 +549,92 @@ const Users: React.FC = () => {
                     <Button type="button" onClick={handleNext}>
                       Próximo
                       <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
+                    </Button>
                   ) : (
-                <Button type="submit">
-                  {editingId ? 'Salvar' : 'Criar'}
-                </Button>
+                    <Button type="submit">Criar</Button>
                   )}
                 </div>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={openDialog && !!editingId} onOpenChange={setOpenDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Editar Usuário</DialogTitle>
+            </DialogHeader>
+            
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Digite o nome completo"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="exemplo@email.com"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="cpf">CPF</Label>
+                  <Input
+                    id="cpf"
+                    value={formData.cpf}
+                    onChange={handleCPFChange}
+                    maxLength={14}
+                    placeholder="000.000.000-00"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="role">Função</Label>
+                  <Select 
+                    value={formData.role}
+                    onValueChange={handleRoleChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma função" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SUPERADMIN">Super Administrador</SelectItem>
+                      <SelectItem value="ADMIN">Administrador</SelectItem>
+                      <SelectItem value="USER">Usuário</SelectItem>
+                      <SelectItem value="GRUPO_DE_RISCO">Grupo de Risco</SelectItem>
+                      <SelectItem value="GUARDINHA_DA_RUA">Guardinha da Rua</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Digite uma nova senha"
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter className="mt-4">
+                <Button type="submit">Salvar</Button>
               </DialogFooter>
             </form>
           </DialogContent>
