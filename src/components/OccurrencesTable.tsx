@@ -58,6 +58,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0);
+  const [newMessages, setNewMessages] = useState<Record<string, boolean>>({});
 
   const userRole = authService.getUserRole();
   const canEditDelete = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
@@ -120,7 +121,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
     }
 
     switch (type) {
-      case 'ROUBOS_E_FURTOS': 
+      case 'ROUBOS_E_FURTOS':
         return <AlertTriangle className="h-4 w-4 text-red-500" />;
       case 'VIOLENCIA_DOMESTICA':
       case 'MARIA_DA_PENHA':
@@ -129,7 +130,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
         return <FileText className="h-4 w-4 text-yellow-500" />;
       case 'OUTROS':
         return <FileText className="h-4 w-4 text-gray-500" />;
-      default: 
+      default:
         return <FileText className="h-4 w-4 text-blue-500" />;
     }
   };
@@ -143,7 +144,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
     }
 
     switch (type) {
-      case 'ROUBOS_E_FURTOS': 
+      case 'ROUBOS_E_FURTOS':
         return <Badge variant="destructive">Roubos e Furtos</Badge>;
       case 'VIOLENCIA_DOMESTICA':
       case 'MARIA_DA_PENHA':
@@ -152,7 +153,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
         return <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">Posse de Armas</Badge>;
       case 'OUTROS':
         return <Badge variant="outline" className="bg-gray-100 text-gray-700">Outros</Badge>;
-      default: 
+      default:
         return <Badge variant="default">{formatOccurrenceType(type)}</Badge>;
     }
   };
@@ -256,7 +257,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
           Authorization: `Bearer ${token}`
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to load image: ${response.statusText}`);
       }
@@ -287,8 +288,8 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
     };
   }, [occurrences]);
 
-  const ActionsCell = ({ occurrence, onEdit, onDelete, onChat, onNotification, isAdmin }: { 
-    occurrence: Occurrence; 
+  const ActionsCell = ({ occurrence, onEdit, onDelete, onChat, onNotification, isAdmin }: {
+    occurrence: Occurrence;
     onEdit: (occurrence: Occurrence) => void;
     onDelete: (id: number) => void;
     onChat: (occurrence: Occurrence) => void;
@@ -313,7 +314,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
               variant="ghost"
               size="icon"
               onClick={() => onEdit(occurrence)}
-              // title="Editar ocorrência"
+            // title="Editar ocorrência"
             >
               <Edit className="h-4 w-4" />
             </Button>
@@ -330,6 +331,78 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
         )}
       </div>
     );
+  };
+
+  useEffect(() => {
+    const lastMessagesRef: Record<string, string | null> = {};
+  
+    const initializeChat = async (occurrence: Occurrence) => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('Token não encontrado');
+          return;
+        }
+
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const url = `${apiUrl}/api/v1/chat/ocurrences/${occurrence.id}/chat`;
+  
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Erro na resposta:', errorText);
+          return;
+        }
+  
+        const data = await response.json();
+        const message = data?.chat?.messages?.[0]?.content;
+  
+        if (!message) {
+          console.log('⚠️ Nenhuma mensagem encontrada.');
+          return;
+        }
+  
+        if (lastMessagesRef[occurrence.id] !== message) {
+          console.log('🆕 Mensagem diferente para ocorrência:', occurrence.id);
+          lastMessagesRef[occurrence.id] = message;
+          setNewMessages(prev => ({
+            ...prev,
+            [occurrence.id]: true
+          }));
+        }
+      } catch (error) {
+        console.error('💥 Erro ao buscar chat:', error);
+      }
+    };
+  
+    // Inicializa o chat para cada ocorrência
+    occurrences.forEach(occurrence => {
+      initializeChat(occurrence);
+    });
+  
+    const interval = setInterval(() => {
+      occurrences.forEach(occurrence => {
+        initializeChat(occurrence);
+      });
+    }, 5000);
+  
+    return () => clearInterval(interval);
+  }, [occurrences]);
+
+  // Função para resetar o estado de nova mensagem para uma ocorrência específica
+  const handleChatClick = (occurrence: Occurrence) => {
+    setNewMessages(prev => ({
+      ...prev,
+      [occurrence.id]: false
+    }));
+    onChat(occurrence);
   };
 
   return (
@@ -394,12 +467,16 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onChat(occurrence)}
+                        onClick={() => handleChatClick(occurrence)}
                         className="hover:bg-green-100 dark:hover:bg-green-900"
                       >
                         <MessageCircle className="h-4 w-4 text-green-500" />
+                        {newMessages[occurrence.id] && (
+                          <span className="absolute inline-block h-2 w-2 rounded-full bg-red-500 animate-ping" />
+                        )}
                       </Button>
                     )}
+                    
                     {isAdmin && (
                       <Button
                         variant="ghost"
@@ -559,7 +636,7 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                     <h4 className="font-medium text-base mb-2">Fotos</h4>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {selectedOccurrence.photos.map((photo, index) => (
-                        <div 
+                        <div
                           key={index}
                           className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group"
                           onClick={() => handlePhotoClick(photo)}
@@ -697,8 +774,8 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
                       className={cn(
                         "w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200 ring-offset-0",
                         "hover:ring-2 hover:ring-white hover:ring-offset-0",
-                        currentPhotoIndex === index 
-                          ? "ring-2 ring-white opacity-100" 
+                        currentPhotoIndex === index
+                          ? "ring-2 ring-white opacity-100"
                           : "opacity-50 hover:opacity-75"
                       )}
                     >
