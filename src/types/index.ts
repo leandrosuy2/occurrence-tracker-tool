@@ -69,6 +69,7 @@ export interface Occurrence {
   longitude: number;
   photos: string[];
   status: 'EM_ABERTO' | 'ACEITO' | 'ATENDIDO' | 'ENCERRADO';
+  policeStation_id?: number;
   User?: {
     id: string;
     name: string;
@@ -78,6 +79,12 @@ export interface Occurrence {
       role: string;
     };
   };
+  PoliceStation?: {
+    id: number;
+    name: string;
+    address: string;
+    phone: string;
+  } | null;
 }
 
 export interface OccurrenceStats {

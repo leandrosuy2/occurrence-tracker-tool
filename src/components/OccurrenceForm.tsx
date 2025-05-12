@@ -23,32 +23,50 @@ interface ImageWithAuthProps {
 
 const ImageWithAuth: React.FC<ImageWithAuthProps> = ({ src, alt, className }) => {
   const [imageUrl, setImageUrl] = useState<string>('');
+  const [error, setError] = useState<boolean>(false);
 
   useEffect(() => {
     const loadImage = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Token não encontrado');
+        }
+
         const response = await fetch(src, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
-        if (!response.ok) throw new Error('Failed to load image');
+        if (!response.ok) {
+          throw new Error(`Erro ao carregar imagem: ${response.status}`);
+        }
         
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
         setImageUrl(objectUrl);
+        setError(false);
         
         return () => URL.revokeObjectURL(objectUrl);
       } catch (error) {
         console.error('Error loading image:', error);
+        setError(true);
         setImageUrl(''); // Fallback to empty or a placeholder image
       }
     };
 
     loadImage();
   }, [src]);
+
+  if (error) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-muted`}>
+        <AlertCircle className="h-8 w-8 text-destructive" />
+        <span className="sr-only">Erro ao carregar imagem</span>
+      </div>
+    );
+  }
 
   return <img src={imageUrl} alt={alt} className={className} />;
 };
@@ -137,9 +155,29 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
         (error) => {
           console.error("Erro ao obter localização:", error);
           setGettingLocation(false);
-          toast.error("Não foi possível obter sua localização atual. Selecione manualmente no mapa.");
+          let errorMessage = "Não foi possível obter sua localização atual. ";
+          
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage += "Por favor, permita o acesso à sua localização nas configurações do navegador.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage += "Informações de localização indisponíveis.";
+              break;
+            case error.TIMEOUT:
+              errorMessage += "Tempo esgotado ao tentar obter sua localização.";
+              break;
+            default:
+              errorMessage += "Selecione manualmente no mapa.";
+          }
+          
+          toast.error(errorMessage);
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { 
+          enableHighAccuracy: true, 
+          timeout: 10000, 
+          maximumAge: 0 
+        }
       );
     } else {
       toast.error("Seu navegador não suporta geolocalização. Selecione manualmente no mapa.");
@@ -157,6 +195,13 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
     const validFiles: File[] = [];
     const validPreviews: string[] = [];
     
+    // Limite total de fotos (incluindo as existentes)
+    const totalPhotos = existingPhotos.length + photos.length + files.length;
+    if (totalPhotos > 10) {
+      toast.error('Máximo de 10 fotos permitidas');
+      return;
+    }
+    
     files.forEach(file => {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast.error(`A foto ${file.name} excede o limite de 5MB`);
@@ -168,8 +213,21 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
         return;
       }
       
+      // Verificar dimensões da imagem
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        if (img.width < 800 || img.height < 600) {
+          toast.warning(`A foto ${file.name} tem resolução baixa. Recomendamos fotos com pelo menos 800x600 pixels.`);
+        }
+      };
+      
+      img.src = objectUrl;
+      
       validFiles.push(file);
-      validPreviews.push(URL.createObjectURL(file));
+      validPreviews.push(objectUrl);
     });
 
     setPhotos(prevPhotos => [...prevPhotos, ...validFiles]);
@@ -206,6 +264,36 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
       toast.error('Por favor, selecione uma localização no mapa');
       return;
     }
+
+    if (!title.trim()) {
+      toast.error('Por favor, informe um título para a ocorrência');
+      return;
+    }
+
+    if (!description.trim()) {
+      toast.error('Por favor, informe uma descrição para a ocorrência');
+      return;
+    }
+
+    if (!type) {
+      toast.error('Por favor, selecione um tipo de ocorrência');
+      return;
+    }
+
+    if (!date) {
+      toast.error('Por favor, informe a data da ocorrência');
+      return;
+    }
+
+    if (!time) {
+      toast.error('Por favor, informe a hora da ocorrência');
+      return;
+    }
+
+    // if (isAdmin && !policeStationId) {
+    //   toast.error('Por favor, selecione uma delegacia');
+    //   return;
+    // }
     
     try {
       setLoading(true);
@@ -213,8 +301,8 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
       const formData = new FormData();
       
       // Adicionar campos básicos
-      formData.append('title', title);
-      formData.append('description', description);
+      formData.append('title', title.trim());
+      formData.append('description', description.trim());
       formData.append('type', type);
       formData.append('latitude', latitude.toString());
       formData.append('longitude', longitude.toString());
@@ -265,7 +353,7 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
       }
     } catch (error) {
       console.error('Error saving occurrence:', error);
-      toast.error('Erro ao salvar ocorrência');
+      toast.error('Erro ao salvar ocorrência. Por favor, tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -390,11 +478,24 @@ const OccurrenceForm: React.FC<OccurrenceFormProps> = ({
             </Label>
             <div className="border rounded-md overflow-hidden h-[250px] sm:h-[300px] md:h-[350px]">
               <Map
-                center={longitude && latitude ? [longitude, latitude] : undefined}
-                zoom={longitude && latitude ? 13 : 10}
+                center={latitude && longitude ? [latitude, longitude] : undefined}
+                zoom={latitude && longitude ? 13 : 10}
                 onLocationSelect={handleLocationSelect}
                 selectionMode={true}
                 getUserLocation={!locationSelected}
+                occurrences={occurrence ? [{
+                  id: occurrence.id,
+                  type: occurrence.type,
+                  title: occurrence.title || '',
+                  description: occurrence.description || '',
+                  date: occurrence.date,
+                  time: occurrence.time,
+                  latitude: occurrence.latitude,
+                  longitude: occurrence.longitude,
+                  photos: occurrence.photos,
+                  status: occurrence.status,
+                  policeStation_id: occurrence.policeStation_id
+                }] : []}
               />
             </div>
             {locationSelected && (

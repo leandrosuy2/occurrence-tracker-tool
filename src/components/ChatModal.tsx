@@ -464,7 +464,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
             </div>
           </div>
           <div className="flex gap-2">
-            {chatStatus === 'EM_ABERTO' && (
+            {/* {chatStatus === 'EM_ABERTO' && (
               <button
                 onClick={() => chatId && closeChat(chatId)}
                 className="p-2 hover:bg-red-50 rounded-full text-red-600"
@@ -472,7 +472,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
               >
                 <X className="w-6 h-6" />
               </button>
-            )}
+            )} */}
             <button
               onClick={handleClose}
               className="p-2 hover:bg-gray-100 rounded-full"
