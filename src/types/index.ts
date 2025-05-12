@@ -7,6 +7,7 @@ export interface User {
   cpf: string;
   avatar?: string;
   role?: string;
+  phone?: string;
   street?: string;
   number?: string;
   complement?: string;

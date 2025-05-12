@@ -21,11 +21,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User } from '@/types';
 import userService from '@/services/userService';
-import { Edit, Trash, UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Edit, Trash, UserPlus, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,6 +41,7 @@ const Users: React.FC = () => {
     cpfUnformatted: '',
     password: '',
     role: 'USER',
+    phone: '',
     avatar: null as File | null,
     documentPhoto: null as File | null,
     documentSelfie: null as File | null,
@@ -56,11 +59,28 @@ const Users: React.FC = () => {
     fetchUsers();
   }, []);
   
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredUsers(users);
+      return;
+    }
+
+    const searchTermLower = searchTerm.toLowerCase();
+    const filtered = users.filter(user => 
+      user.name.toLowerCase().includes(searchTermLower) ||
+      user.email.toLowerCase().includes(searchTermLower) ||
+      user.cpf.replace(/\D/g, '').includes(searchTermLower) ||
+      (user.phone && user.phone.replace(/\D/g, '').includes(searchTermLower))
+    );
+    setFilteredUsers(filtered);
+  }, [searchTerm, users]);
+  
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const data = await userService.getAllUsers();
       setUsers(data);
+      setFilteredUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error('Erro ao carregar usuários');
@@ -107,6 +127,7 @@ const Users: React.FC = () => {
       cpfUnformatted: '',
       password: '',
       role: 'USER',
+      phone: '',
       avatar: null,
       documentPhoto: null,
       documentSelfie: null,
@@ -132,6 +153,7 @@ const Users: React.FC = () => {
     formDataObj.append('email', formData.email);
     formDataObj.append('cpf', formData.cpfUnformatted);
     formDataObj.append('role', formData.role);
+    formDataObj.append('phone', formData.phone);
     
     if (editingId) {
       if (formData.password && formData.password !== 'placeholder') {
@@ -203,6 +225,7 @@ const Users: React.FC = () => {
         cpfUnformatted: user.cpf,
         password: 'placeholder',
         role: user.Permission?.role || 'USER',
+        phone: user.phone || '',
         avatar: null,
         documentPhoto: null,
         documentSelfie: null,
@@ -232,10 +255,12 @@ const Users: React.FC = () => {
     return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9, 11)}`;
   };
 
-  const formatCEP = (value: string) => {
+  const formatPhone = (value: string) => {
     const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length <= 5) return cleaned;
-    return `${cleaned.slice(0, 5)}-${cleaned.slice(5, 8)}`;
+    if (cleaned.length <= 2) return cleaned;
+    if (cleaned.length <= 6) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    if (cleaned.length <= 10) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
   };
 
   const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,6 +271,21 @@ const Users: React.FC = () => {
       cpf: formatted,
       cpfUnformatted: cleaned
     }));
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleaned = e.target.value.replace(/\D/g, '');
+    const formatted = formatPhone(cleaned);
+    setFormData(prev => ({ 
+      ...prev, 
+      phone: formatted
+    }));
+  };
+
+  const formatCEP = (value: string) => {
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length <= 5) return cleaned;
+    return `${cleaned.slice(0, 5)}-${cleaned.slice(5, 8)}`;
   };
 
   const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -315,6 +355,18 @@ const Users: React.FC = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="exemplo@email.com"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={handlePhoneChange}
+                maxLength={15}
+                placeholder="(00) 00000-0000"
                 required
               />
             </div>
@@ -592,6 +644,18 @@ const Users: React.FC = () => {
                 </div>
                 
                 <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={handlePhoneChange}
+                    maxLength={15}
+                    placeholder="(00) 00000-0000"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
                   <Label htmlFor="cpf">CPF</Label>
                   <Input
                     id="cpf"
@@ -643,18 +707,34 @@ const Users: React.FC = () => {
       </div>
       
       <div className="border rounded-md">
+        <div className="p-4 border-b">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, email, CPF ou telefone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+        </div>
+
         {loading ? (
           <div className="p-8 text-center">Carregando usuários...</div>
-        ) : users.length === 0 ? (
+        ) : filteredUsers.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-muted-foreground">Nenhum usuário encontrado</p>
-            <Button
-              onClick={() => setOpenDialog(true)}
-              variant="link"
-              className="mt-2"
-            >
-              Criar o primeiro usuário
-            </Button>
+            <p className="text-muted-foreground">
+              {searchTerm ? 'Nenhum usuário encontrado para esta busca' : 'Nenhum usuário encontrado'}
+            </p>
+            {!searchTerm && (
+              <Button
+                onClick={() => setOpenDialog(true)}
+                variant="link"
+                className="mt-2"
+              >
+                Criar o primeiro usuário
+              </Button>
+            )}
           </div>
         ) : (
           <Table>
@@ -663,17 +743,21 @@ const Users: React.FC = () => {
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>CPF</TableHead>
+                <TableHead>Telefone</TableHead>
                 <TableHead>Função</TableHead>
+                <TableHead>Endereço</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.cpf}</TableCell>
+                  <TableCell>{formatCPF(user.cpf)}</TableCell>
+                  <TableCell>{user.phone ? formatPhone(user.phone) : '-'}</TableCell>
                   <TableCell>{getRoleName(user.Permission?.role)}</TableCell>
+                  <TableCell>{user.street ? `${user.street}, ${user.number}` : '-'}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
