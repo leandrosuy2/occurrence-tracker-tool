@@ -62,8 +62,8 @@ const OccurrencesTable: React.FC<OccurrencesTableProps> = ({
   const userRole = authService.getUserRole();
   const canEditDelete = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
 
-  console.log('User Role:', userRole);
-  console.log('Can Edit Delete:', canEditDelete);
+  // console.log('User Role:', userRole);
+  // console.log('Can Edit Delete:', canEditDelete);
 
   const totalPages = Math.ceil(occurrences.length / ITEMS_PER_PAGE);
   const paginatedOccurrences = occurrences.slice(

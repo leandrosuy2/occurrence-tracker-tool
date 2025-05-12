@@ -1,7 +1,7 @@
 let isAdmin = false;
 
 export const setAdminStatus = (status: boolean) => {
-  console.log('Definindo status de admin:', status);
+  // console.log('Definindo status de admin:', status);
   isAdmin = status;
 };
 

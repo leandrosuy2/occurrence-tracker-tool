@@ -36,7 +36,7 @@ class NotificationService {
     });
 
     this.socket.on('connect', () => {
-      console.log('Conectado ao WebSocket de notificações');
+      // console.log('Conectado ao WebSocket de notificações');
     });
 
     this.socket.on('notification', (data) => {
@@ -56,7 +56,7 @@ class NotificationService {
   }
 
   public setAdminStatus(isAdmin: boolean) {
-    console.log('Definindo status de admin:', isAdmin);
+    // console.log('Definindo status de admin:', isAdmin);
     this.isAdmin = isAdmin;
   }
 

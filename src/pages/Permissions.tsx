@@ -51,7 +51,7 @@ const Permissions: React.FC = () => {
       setEditDialogOpen(false);
       toast.success('Permissão atualizada com sucesso');
     } catch (error) {
-      console.error('Error updating user role:', error);
+      // console.error('Error updating user role:', error);
       toast.error('Erro ao atualizar permissão');
     }
   };

@@ -17,11 +17,11 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     const checkAdmin = () => {
       const user = authService.getCurrentUser();
       if (user) {
-        console.log('Sidebar - Dados do usuário:', user);
+        // console.log('Sidebar - Dados do usuário:', user);
         const adminStatus = authService.isAdmin();
         const superAdminStatus = authService.isSuperAdmin();
-        console.log('Sidebar - Status de admin:', adminStatus);
-        console.log('Sidebar - Status de superadmin:', superAdminStatus);
+        // console.log('Sidebar - Status de admin:', adminStatus);
+        // console.log('Sidebar - Status de superadmin:', superAdminStatus);
         setIsAdmin(adminStatus);
         setIsSuperAdmin(superAdminStatus);
       }

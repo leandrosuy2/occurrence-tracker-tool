@@ -30,7 +30,7 @@ export const connectNotificationWebSocket = (isAdmin: boolean) => {
   socket = io(socketUrl);
 
   socket.on('connect', () => {
-    console.log('Conectado ao servidor de notificações');
+    // console.log('Conectado ao servidor de notificações');
     reconnectAttempts = 0;
   });
 

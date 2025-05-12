@@ -106,7 +106,7 @@ const getCurrentUser = (): User | null => {
   const userStr = localStorage.getItem('user');
   if (userStr) {
     const user = JSON.parse(userStr);
-    console.log('Current user data:', user);
+    // console.log('Current user data:', user);
     return user;
   }
   return null;
@@ -127,17 +127,17 @@ const isAuthenticated = (): boolean => {
 
 const isAdmin = (): boolean => {
   const user = getCurrentUser();
-  console.log('AuthService - Verificando admin - User:', user);
+  // console.log('AuthService - Verificando admin - User:', user);
   const isAdminUser = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
-  console.log('AuthService - Verificando admin - Resultado:', isAdminUser);
+  // console.log('AuthService - Verificando admin - Resultado:', isAdminUser);
   return isAdminUser;
 };
 
 const isSuperAdmin = (): boolean => {
   const user = getCurrentUser();
-  console.log('AuthService - Verificando superadmin - User:', user);
+  // console.log('AuthService - Verificando superadmin - User:', user);
   const isSuperAdminUser = user?.role === 'SUPERADMIN';
-  console.log('AuthService - Verificando superadmin - Resultado:', isSuperAdminUser);
+  // console.log('AuthService - Verificando superadmin - Resultado:', isSuperAdminUser);
   return isSuperAdminUser;
 };
 

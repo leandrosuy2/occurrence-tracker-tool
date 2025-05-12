@@ -35,7 +35,7 @@ const App = () => {
     const checkAdmin = () => {
       try {
         const isAdminUser = authService.isAdmin();
-        console.log('Usuário é admin:', isAdminUser);
+        // console.log('Usuário é admin:', isAdminUser);
         setIsAdmin(isAdminUser);
       } catch (error) {
         console.error('Erro ao verificar admin:', error);
@@ -68,11 +68,11 @@ const App = () => {
       });
     };
 
-    console.log('App - Registrando listener de newOccurrence');
+    // console.log('App - Registrando listener de newOccurrence');
     window.addEventListener('newOccurrence', handleNewOccurrence as EventListener);
 
     return () => {
-      console.log('App - Removendo listener de newOccurrence');
+      // console.log('App - Removendo listener de newOccurrence');
       window.removeEventListener('newOccurrence', handleNewOccurrence as EventListener);
     };
   }, [isAdmin]);
@@ -96,7 +96,7 @@ const App = () => {
 
   const handleCloseChatModal = () => {
     console.log('App - Estado atual da ocorrência:', newOccurrence);
-    console.log('App - Usuário é admin:', isAdmin);
+    // console.log('App - Usuário é admin:', isAdmin);
     setIsChatModalOpen(false);
   };
 
